@@ -1,0 +1,13 @@
+---
+
+- name: Fail if required etcd settings not defined
+  ansible.builtin.fail:
+    msg: >-
+      You need to define a required configuration setting (`{{ item.name }}`).
+  when: "item.when | bool and vars[item.name] == ''"
+  with_items:
+    - {'name': 'etcd_identifier', 'when': true}
+    - {'name': 'etcd_uid', 'when': true}
+    - {'name': 'etcd_gid', 'when': true}
+    - {'name': 'etcd_container_network', 'when': true}
+    - {'name': 'etcd_environment_variable_etcd_root_password', 'when': "{{ not etcd_environment_variable_allow_none_authentication }}"}

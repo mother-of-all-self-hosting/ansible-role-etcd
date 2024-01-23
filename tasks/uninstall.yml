@@ -1,0 +1,25 @@
+---
+
+- name: Check existence of etcd systemd service
+  ansible.builtin.stat:
+    path: "{{ devture_systemd_docker_base_systemd_path }}/{{ etcd_identifier }}.service"
+  register: etcd_service_stat
+
+- when: etcd_service_stat.stat.exists | bool
+  block:
+    - name: Ensure etcd systemd service is stopped
+      ansible.builtin.service:
+        name: "{{ etcd_identifier }}"
+        state: stopped
+        enabled: false
+        daemon_reload: true
+
+    - name: Ensure etcd systemd service does not exist
+      ansible.builtin.file:
+        path: "{{ devture_systemd_docker_base_systemd_path }}/{{ etcd_identifier }}.service"
+        state: absent
+
+    - name: Ensure etcd path doesn't exist
+      ansible.builtin.file:
+        path: "{{ etcd_base_path }}"
+        state: absent
