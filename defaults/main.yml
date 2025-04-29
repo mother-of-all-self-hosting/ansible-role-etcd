@@ -17,6 +17,7 @@ etcd_identifier: etcd
 etcd_uid: ''
 etcd_gid: ''
 
+# renovate: datasource=docker depName=bitnami/etcd versioning=semver
 etcd_version: 3.5.11
 
 etcd_base_path: "/{{ etcd_identifier }}"
