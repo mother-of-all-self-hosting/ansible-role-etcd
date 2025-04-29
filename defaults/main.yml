@@ -104,7 +104,7 @@ etcd_environment_variable_allow_none_authentication: false
 # Additional environment variables.
 etcd_environment_variables_additional_variables: ''
 # List of systemd services that etcd.service depends on
-etcd_systemd_required_services_list: "{{ etcd_systemd_required_systemd_services_list_default + etcd_systemd_required_systemd_services_list_auto + etcd_systemd_required_systemd_services_list_custom }}"
-etcd_systemd_required_systemd_services_list_default: ['docker.service']
-etcd_systemd_required_systemd_services_list_auto: []
-etcd_systemd_required_systemd_services_list_custom: []
+etcd_systemd_required_services_list: "{{ etcd_systemd_required_services_list_default + etcd_systemd_required_services_list_auto + etcd_systemd_required_services_list_custom }}"
+etcd_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
+etcd_systemd_required_services_list_auto: []
+etcd_systemd_required_services_list_custom: []
