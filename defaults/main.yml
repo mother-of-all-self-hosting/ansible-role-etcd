@@ -17,7 +17,7 @@ etcd_data_path: "{{ etcd_base_path }}/data"
 etcd_tmp_path: "{{ etcd_base_path }}/tmp"
 
 # renovate: datasource=docker depName=bitnami/etcd versioning=semver
-etcd_version: 3.5.11
+etcd_version: 3.5.21
 
 etcd_uid: ''
 etcd_gid: ''
