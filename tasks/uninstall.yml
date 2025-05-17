@@ -23,7 +23,7 @@
         path: "{{ devture_systemd_docker_base_systemd_path }}/{{ etcd_identifier }}.service"
         state: absent
 
-    - name: Ensure etcd path doesn't exist
+    - name: Ensure etcd path does not exist
       ansible.builtin.file:
         path: "{{ etcd_base_path }}"
         state: absent
