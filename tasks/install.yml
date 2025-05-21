@@ -48,3 +48,4 @@
   ansible.builtin.template:
     src: "{{ role_path }}/templates/systemd/etcd.service.j2"
     dest: "{{ devture_systemd_docker_base_systemd_path }}/{{ etcd_identifier }}.service"
+    mode: 0644
