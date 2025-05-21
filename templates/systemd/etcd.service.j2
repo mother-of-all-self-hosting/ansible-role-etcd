@@ -27,10 +27,10 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
 			--read-only \
 			--network={{ etcd_container_network }} \
 			{% if etcd_container_client_communication_bind_port %}
-			-p {{ etcd_container_client_communication_bind_port }}:2379 \
+			-p {{ etcd_container_client_communication_bind_port }}:{{ etcd_container_client_communication_port }} \
 			{% endif %}
 			{% if etcd_container_peer_communication_bind_port %}
-			-p {{ etcd_container_peer_communication_bind_port }}:2380 \
+			-p {{ etcd_container_peer_communication_bind_port }}:{{ etcd_container_peer_communication_port }} \
 			{% endif %}
 			--env-file={{ etcd_base_path }}/env \
 			--mount type=bind,src={{ etcd_data_path }},dst=/bitnami/etcd \
