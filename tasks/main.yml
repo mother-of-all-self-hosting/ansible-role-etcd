@@ -3,27 +3,25 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-
 - name: Perform etcd installation tasks
-  block:
-    - name: Validate etcd configuration
-      when: etcd_enabled | bool
-      ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
-
-    - name: Install etcd
-      when: etcd_enabled | bool
-      ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
   tags:
     - setup-all
     - setup-etcd
     - install-all
     - install-etcd
+  block:
+    - name: Validate etcd configuration
+      when: etcd_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
+    - name: Install etcd
+      when: etcd_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
 - name: Perform etcd uninstallation tasks
+  tags:
+    - setup-all
+    - setup-etcd
   block:
     - name: Uninstall etcd
       when: not etcd_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
-  tags:
-    - setup-all
-    - setup-etcd
