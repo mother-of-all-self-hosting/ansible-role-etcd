@@ -4,6 +4,7 @@
 
 ---
 - name: Perform etcd installation tasks
+  when: etcd_enabled | bool
   tags:
     - setup-all
     - setup-etcd
@@ -11,17 +12,15 @@
     - install-etcd
   block:
     - name: Validate etcd configuration
-      when: etcd_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
     - name: Install etcd
-      when: etcd_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
 - name: Perform etcd uninstallation tasks
+  when: not etcd_enabled | bool
   tags:
     - setup-all
     - setup-etcd
   block:
     - name: Uninstall etcd
-      when: not etcd_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
