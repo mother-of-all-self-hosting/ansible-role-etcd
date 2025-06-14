@@ -19,29 +19,29 @@ ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_s
 ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm {{ etcd_identifier }} 2>/dev/null || true'
 
 ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
-			--rm \
-			--name={{ etcd_identifier }} \
-			--log-driver=none \
-			--user={{ etcd_uid }}:{{ etcd_gid }} \
-			--cap-drop=ALL \
-			--read-only \
-			--network={{ etcd_container_network }} \
-			{% if etcd_container_client_communication_bind_port %}
-			-p {{ etcd_container_client_communication_bind_port }}:{{ etcd_container_client_communication_port }} \
-			{% endif %}
-			{% if etcd_container_peer_communication_bind_port %}
-			-p {{ etcd_container_peer_communication_bind_port }}:{{ etcd_container_peer_communication_port }} \
-			{% endif %}
-			--env-file={{ etcd_base_path }}/env \
-			--mount type=bind,src={{ etcd_data_path }},dst=/bitnami/etcd \
-			--mount type=bind,src={{ etcd_tmp_path }},dst=/opt/bitnami/etcd/tmp \
-			{% for volume in etcd_container_additional_volumes %}
-			--mount type={{ volume.type | default('bind' if '/' in volume.src else 'volume') }},src={{ volume.src }},dst={{ volume.dst }}{{ (',' + volume.options) if volume.options | default('') else '' }} \
-			{% endfor %}
-			{% for arg in etcd_container_extra_arguments %}
-			{{ arg }} \
-			{% endfor %}
-			{{ etcd_container_image_self_build_name if etcd_container_image_self_build else etcd_container_image }}
+      --rm \
+      --name={{ etcd_identifier }} \
+      --log-driver=none \
+      --user={{ etcd_uid }}:{{ etcd_gid }} \
+      --cap-drop=ALL \
+      --read-only \
+      --network={{ etcd_container_network }} \
+      {% if etcd_container_client_communication_bind_port %}
+      -p {{ etcd_container_client_communication_bind_port }}:{{ etcd_container_client_communication_port }} \
+      {% endif %}
+      {% if etcd_container_peer_communication_bind_port %}
+      -p {{ etcd_container_peer_communication_bind_port }}:{{ etcd_container_peer_communication_port }} \
+      {% endif %}
+      --env-file={{ etcd_base_path }}/env \
+      --mount type=bind,src={{ etcd_data_path }},dst=/bitnami/etcd \
+      --mount type=bind,src={{ etcd_tmp_path }},dst=/opt/bitnami/etcd/tmp \
+      {% for volume in etcd_container_additional_volumes %}
+      --mount type={{ volume.type | default('bind' if '/' in volume.src else 'volume') }},src={{ volume.src }},dst={{ volume.dst }}{{ (',' + volume.options) if volume.options | default('') else '' }} \
+      {% endfor %}
+      {% for arg in etcd_container_extra_arguments %}
+      {{ arg }} \
+      {% endfor %}
+      {{ etcd_container_image_self_build_name if etcd_container_image_self_build else etcd_container_image }}
 
 {% for network in etcd_container_additional_networks %}
 ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} network connect {{ network }} {{ etcd_identifier }}
