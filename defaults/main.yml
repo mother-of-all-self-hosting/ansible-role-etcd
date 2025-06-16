@@ -16,7 +16,6 @@ etcd_base_path: "/{{ etcd_identifier }}"
 etcd_data_path: "{{ etcd_base_path }}/data"
 etcd_tmp_path: "{{ etcd_base_path }}/tmp"
 
-# Note: Update "etcd_container_image_self_build_src_files_path_etcd" when major or minor update occurs
 # renovate: datasource=docker depName=bitnami/etcd versioning=semver
 etcd_version: 3.6.1
 
@@ -35,7 +34,8 @@ etcd_container_image_self_build_name: "bitnami/etcd:{{ etcd_container_image_self
 etcd_container_image_self_build_repo: "https://github.com/bitnami/containers.git"
 etcd_container_image_self_build_repo_version: "main" # There is not a tag as etcd_container_image_self_build_repo is the container library which includes various Docker images
 etcd_container_image_self_build_src_files_path: "{{ etcd_base_path }}/docker-src"
-etcd_container_image_self_build_src_files_path_etcd: "{{ etcd_container_image_self_build_src_files_path }}/bitnami/etcd/3.6/debian-12" # See https://github.com/bitnami/containers/tree/main/bitnami/etcd#get-this-image
+etcd_container_image_self_build_repo_dockerfile_dir: "{{ etcd_container_image_self_build_src_files_path }}/bitnami/etcd/{{ etcd_version.split('.')[0] }}.{{ etcd_version.split('.')[1] }}/{{ etcd_container_image_self_build_repo_dockerfile_dir_base }}" # See https://github.com/bitnami/containers/tree/main/bitnami/etcd#get-this-image
+etcd_container_image_self_build_repo_dockerfile_dir_base: debian-12
 
 # Specifies how the container publishes its client communication port
 #
