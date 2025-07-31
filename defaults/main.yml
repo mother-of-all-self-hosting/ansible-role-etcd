@@ -68,17 +68,9 @@ etcd_container_additional_networks_custom: []
 # if you wish to mount your own files into the container.
 # Contains definition objects like this: `{"type": "bind", "src": "/outside", "dst": "/inside", "options": "readonly"}.
 # See the `--mount` documentation for the `docker run` command.
-#
-# Example:
-# etcd_container_additional_volumes:
-#   - type: bind
-#     src: /path/on/the/host
-#     dst: /data
-#   - type: bind
-#     src: /another-path/on/the/host
-#     dst: /read-only
-#     options: readonly
-etcd_container_additional_volumes: []
+etcd_container_additional_volumes: "{{ etcd_container_additional_volumes_auto + etcd_container_additional_volumes_custom }}"
+etcd_container_additional_volumes_auto: []
+etcd_container_additional_volumes_custom: []
 
 # A list of extra arguments to pass to the container
 etcd_container_extra_arguments: []
