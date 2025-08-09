@@ -18,13 +18,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Setting up etcd
 
-This is an [Ansible](https://www.ansible.com/) role which installs [etcd](https://github.com/httpjamesm/etcd) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
+This is an [Ansible](https://www.ansible.com/) role which installs [etcd](https://etcd.io) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
-etcd allows you to view StackOverflow threads without exposing your IP address, browsing habits, and other browser fingerprinting data to the website.
+etcd is a strongly consistent, distributed key-value store that provides a reliable way to store data that needs to be accessed by a distributed system or cluster of machines. It gracefully handles leader elections during network partitions and can tolerate machine failure, even in the leader node.
 
-See the project's [documentation](https://github.com/httpjamesm/etcd/blob/main/README.md) to learn what etcd does and why it might be useful to you.
-
-[<img src="assets/home_dark.webp" title="Home screen in dark mode" width="600" alt="Home screen in dark mode">](assets/home_dark.webp) [<img src="assets/question_dark.webp" title="Question in dark mode" width="600" alt="Question in dark mode">](assets/question_dark.webp) [<img src="assets/answers_light.webp" title="Answer in light mode" width="600" alt="Answer in light mode">](assets/answers_light.webp)
+See the project's [documentation](https://etcd.io/docs/latest/) to learn what etcd does and why it might be useful to you.
 
 ## Adjusting the playbook configuration
 
@@ -48,17 +46,19 @@ etcd_enabled: true
 ########################################################################
 ```
 
-### Set the hostname
+### Password-protect the instance
 
-To enable etcd you need to set the hostname as well. To do so, add the following configuration to your `vars.yml` file. Make sure to replace `example.com` with your own value.
+You also need to set the root password by adding the following configuration to your `vars.yml` file:
 
 ```yaml
-etcd_hostname: "example.com"
+etcd_environment_variable_etcd_root_password: YOUR_PASSWORD_HERE
 ```
 
-After adjusting the hostname, make sure to adjust your DNS records to point the domain to your server.
+Add the following configuration if you'd like to run etcd without password-protection:
 
-**Note**: hosting etcd under a subpath (by configuring the `etcd_path_prefix` variable) does not seem to be possible due to etcd's technical limitations.
+```yaml
+etcd_environment_variable_allow_none_authentication: true
+```
 
 ### Extending the configuration
 
@@ -68,7 +68,7 @@ Take a look at:
 
 - [`defaults/main.yml`](../defaults/main.yml) for some variables that you can customize via your `vars.yml` file. You can override settings (even those that don't have dedicated playbook variables) using the `etcd_environment_variables_additional_variables` variable
 
-See its [`docker-compose.example.yml`](https://github.com/httpjamesm/etcd/blob/main/docker-compose.example.yml) for a complete list of etcd's config options that you could put in `etcd_environment_variables_additional_variables`.
+See its [this page](https://etcd.io/docs/latest/op-guide/configuration/) for a complete list of etcd's config options that you could put in `etcd_environment_variables_additional_variables`.
 
 ## Installing
 
@@ -82,11 +82,7 @@ If you use the MASH playbook, the shortcut commands with the [`just` program](ht
 
 ## Usage
 
-After running the command for installation, etcd becomes available at the specified hostname like `https://example.com`.
-
-[Libredirect](https://libredirect.github.io/), an extension for Firefox and Chromium-based desktop browsers, has support for redirections to etcd. See [this section](https://github.com/httpjamesm/etcd/blob/main/README.md#how-to-make-stack-overflow-links-take-you-to-etcd-automatically) on the official documentation for more information.
-
-If you would like to make your instance public so that it can be used by anyone including Libredirect, please consider to send a PR to the [upstream project](https://github.com/httpjamesm/etcd) to add yours to [`instances.json`](https://github.com/httpjamesm/etcd/blob/main/instances.json), which Libredirect automatically fetches using a script (see [this FAQ entry](https://libredirect.github.io/faq.html#where_the_hell_are_those_instances_coming_from)).
+After running the command for installation, the etcd instance becomes available.
 
 ## Troubleshooting
 
