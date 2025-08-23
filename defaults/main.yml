@@ -75,7 +75,7 @@ etcd_container_additional_volumes_custom: []
 # A list of extra arguments to pass to the container
 etcd_container_extra_arguments: []
 
-# List of systemd services that etcd.service depends on
+# List of systemd services that the etcd systemd service depends on
 etcd_systemd_required_services_list: "{{ etcd_systemd_required_services_list_default + etcd_systemd_required_services_list_auto + etcd_systemd_required_services_list_custom }}"
 etcd_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
 etcd_systemd_required_services_list_auto: []
