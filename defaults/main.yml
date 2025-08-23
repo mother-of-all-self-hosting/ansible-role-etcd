@@ -81,6 +81,12 @@ etcd_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_do
 etcd_systemd_required_services_list_auto: []
 etcd_systemd_required_services_list_custom: []
 
+# List of systemd services that the etcd systemd service wants
+etcd_systemd_wanted_services_list: "{{ etcd_systemd_wanted_services_list_default + etcd_systemd_wanted_services_list_auto + etcd_systemd_wanted_services_list_custom }}"
+etcd_systemd_wanted_services_list_default: []
+etcd_systemd_wanted_services_list_auto: []
+etcd_systemd_wanted_services_list_custom: []
+
 # Controls the `ETCD_NAME` environment variable.
 # Human-readable name for this member.
 # See: https://etcd.io/docs/v3.4/op-guide/configuration/
