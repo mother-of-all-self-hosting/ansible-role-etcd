@@ -25,3 +25,9 @@
     - { "name": "etcd_gid", "when": true }
     - { "name": "etcd_container_network", "when": true }
     - { "name": "etcd_environment_variable_etcd_root_password", "when": "{{ not etcd_environment_variable_allow_none_authentication }}" }
+
+- name: Fail if etcd logging level is invalid
+  ansible.builtin.fail:
+    msg: >-
+      etcd_environment_variable_etcd_log_level must be 'debug', 'info', 'warn', 'error', 'panic', or 'fatal'
+  when: "etcd_environment_variable_etcd_log_level not in ['debug', 'info', 'warn', 'error', 'panic', 'fatal']"

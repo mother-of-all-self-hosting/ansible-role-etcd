@@ -98,7 +98,7 @@ etcd_environment_variable_etcd_enable_v2: false
 
 # Controls the `ETCD_LOG_LEVEL` environment variable.
 # See: https://etcd.io/docs/v3.4/op-guide/configuration/#--log-level
-# Known values: debug, info, warn, error, panic, or fatal
+# Valid values: debug, info, warn, error, panic, or fatal
 etcd_environment_variable_etcd_log_level: info
 
 # Controls the `ETCD_ADVERTISE_CLIENT_URLS` environment variable.
