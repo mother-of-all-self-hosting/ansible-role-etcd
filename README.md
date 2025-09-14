@@ -6,6 +6,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # etcd Ansible role
 
+>[!NOTE]
+> Currently this role is configured to use a container image for etcd in Bitnami Legacy repository, an archive for images which [Bitnami has stopped maintaining](https://github.com/bitnami/containers/issues/83267). Because the image stops receiving an update after September 29th, 2025 and it may be deleted in a future, it is recommended to migrate to another container image.
+
 This is an [Ansible](https://www.ansible.com/) role which installs [etcd](https://etcd.io/) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
 This role *implicitly* depends on:
