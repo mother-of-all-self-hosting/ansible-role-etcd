@@ -87,6 +87,9 @@ etcd_systemd_wanted_services_list_default: []
 etcd_systemd_wanted_services_list_auto: []
 etcd_systemd_wanted_services_list_custom: []
 
+# Specify the timezone
+etcd_environment_variables_tz: UTC
+
 # Controls the `ETCD_NAME` environment variable.
 # Human-readable name for this member.
 # See: https://etcd.io/docs/v3.4/op-guide/configuration/
