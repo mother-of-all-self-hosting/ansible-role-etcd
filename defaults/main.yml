@@ -73,7 +73,9 @@ etcd_container_additional_volumes_auto: []
 etcd_container_additional_volumes_custom: []
 
 # A list of extra arguments to pass to the container
-etcd_container_extra_arguments: []
+etcd_container_extra_arguments: "{{ etcd_container_extra_arguments_auto + etcd_container_extra_arguments_custom }}"
+etcd_container_extra_arguments_auto: []
+etcd_container_extra_arguments_custom: []
 
 # List of systemd services that the etcd systemd service depends on
 etcd_systemd_required_services_list: "{{ etcd_systemd_required_services_list_default + etcd_systemd_required_services_list_auto + etcd_systemd_required_services_list_custom }}"
