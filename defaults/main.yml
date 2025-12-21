@@ -19,8 +19,8 @@ etcd_tmp_path: "{{ etcd_base_path }}/tmp"
 # renovate: datasource=docker depName=bitnamilegacy/etcd versioning=semver
 etcd_version: 3.6.4
 
-etcd_uid: ''
-etcd_gid: ''
+etcd_uid: ""
+etcd_gid: ""
 
 etcd_container_image: "{{ etcd_container_image_registry_prefix }}bitnamilegacy/etcd:{{ etcd_container_image_tag }}"
 etcd_container_image_tag: "{{ etcd_version }}"
@@ -40,12 +40,12 @@ etcd_container_image_self_build_repo_dockerfile_dir_base: debian-12
 # Specifies how the container publishes its client communication port
 #
 # Takes an "<ip>:<port>" value (e.g. "127.0.0.1:2379"), just a port number or an empty string to not expose.
-etcd_container_client_communication_bind_port: ''
+etcd_container_client_communication_bind_port: ""
 
 # Specifies how the container publishes its peer communication port
 #
 # Takes an "<ip>:<port>" value (e.g. "127.0.0.1:2380"), just a port number or an empty string to not expose.
-etcd_container_peer_communication_bind_port: ''
+etcd_container_peer_communication_bind_port: ""
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 etcd_container_network: "{{ etcd_identifier }}"
@@ -117,7 +117,7 @@ etcd_environment_variable_etcd_listen_client_urls: "http://0.0.0.0:2379"
 # Controls the `ETCD_ROOT_PASSWORD` environment variable.
 # Unless `etcd_environment_variable_allow_none_authentication` is set to `true`, this must be set.
 # See: https://github.com/bitnami/containers/blob/4b32eabd74c3d84a67e25b495f501c2fcf418069/bitnami/etcd/3.5/debian-11/rootfs/opt/bitnami/scripts/etcd-env.sh#L89C8-L89C26
-etcd_environment_variable_etcd_root_password: ''
+etcd_environment_variable_etcd_root_password: ""
 
 # Controls the `ALLOW_NONE_AUTHENTICATION` environment variable.
 # This is specific to the bitnami/etcd container image we use.
@@ -126,4 +126,4 @@ etcd_environment_variable_etcd_root_password: ''
 etcd_environment_variable_allow_none_authentication: false
 
 # Additional environment variables.
-etcd_environment_variables_additional_variables: ''
+etcd_environment_variables_additional_variables: ""
