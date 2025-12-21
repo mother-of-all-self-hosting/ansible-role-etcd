@@ -72,7 +72,7 @@ etcd_container_additional_volumes: "{{ etcd_container_additional_volumes_auto + 
 etcd_container_additional_volumes_auto: []
 etcd_container_additional_volumes_custom: []
 
-# A list of extra arguments to pass to the container
+# A list of extra arguments to pass to the container (`docker create` command)
 etcd_container_extra_arguments: "{{ etcd_container_extra_arguments_auto + etcd_container_extra_arguments_custom }}"
 etcd_container_extra_arguments_auto: []
 etcd_container_extra_arguments_custom: []
