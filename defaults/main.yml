@@ -37,6 +37,9 @@ etcd_container_image_self_build_src_files_path: "{{ etcd_base_path }}/docker-src
 etcd_container_image_self_build_repo_dockerfile_dir: "{{ etcd_container_image_self_build_src_files_path }}/bitnami/etcd/{{ etcd_version.split('.')[0] }}.{{ etcd_version.split('.')[1] }}/{{ etcd_container_image_self_build_repo_dockerfile_dir_base }}" # See https://github.com/bitnami/containers/tree/main/bitnami/etcd#get-this-image
 etcd_container_image_self_build_repo_dockerfile_dir_base: debian-12
 
+# The base container network. It will be auto-created by this role if it doesn't exist already.
+etcd_container_network: "{{ etcd_identifier }}"
+
 # Specifies how the container publishes its client communication port
 #
 # Takes an "<ip>:<port>" value (e.g. "127.0.0.1:2379"), just a port number or an empty string to not expose.
@@ -46,9 +49,6 @@ etcd_container_client_communication_bind_port: ""
 #
 # Takes an "<ip>:<port>" value (e.g. "127.0.0.1:2380"), just a port number or an empty string to not expose.
 etcd_container_peer_communication_bind_port: ""
-
-# The base container network. It will be auto-created by this role if it doesn't exist already.
-etcd_container_network: "{{ etcd_identifier }}"
 
 # The client communication port number in the container
 etcd_container_client_communication_port: 2379
