@@ -40,14 +40,14 @@ etcd_container_image_self_build_repo_dockerfile_dir_base: debian-12
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 etcd_container_network: "{{ etcd_identifier }}"
 
-# Specifies how the container publishes its client communication port
+# Specify how the container publishes its client communication port (as defined by `etcd_container_client_communication_port`).
 #
-# Takes an "<ip>:<port>" value (e.g. "127.0.0.1:2379"), just a port number or an empty string to not expose.
+# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2379"), just a port number or an empty string to not expose.
 etcd_container_client_communication_bind_port: ""
 
-# Specifies how the container publishes its peer communication port
+# Specify how the container publishes its peer communication port (as defined by `etcd_container_peer_communication_port`).
 #
-# Takes an "<ip>:<port>" value (e.g. "127.0.0.1:2380"), just a port number or an empty string to not expose.
+# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2380"), just a port number or an empty string to not expose.
 etcd_container_peer_communication_bind_port: ""
 
 # The client communication port number in the container
