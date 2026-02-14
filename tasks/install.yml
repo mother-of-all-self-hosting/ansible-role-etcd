@@ -73,6 +73,7 @@
           path: "{{ etcd_container_image_self_build_repo_dockerfile_dir }}"
           pull: true
           args:
+      register: etcd_container_image_build_result
 
 - name: Ensure etcd container network is created via community.docker.docker_network
   when: devture_systemd_docker_base_container_network_creation_method == 'ansible-module'
