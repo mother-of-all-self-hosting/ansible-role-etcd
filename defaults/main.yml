@@ -40,6 +40,9 @@ etcd_container_image_self_build_repo_dockerfile_dir_base: debian-12
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 etcd_container_network: "{{ etcd_identifier }}"
 
+# Control if the container network is deleted on uninstalling.
+etcd_container_network_deletion_enabled: true
+
 # Specify how the container publishes its client communication port (as defined by `etcd_container_client_communication_port`).
 #
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2379"), just a port number or an empty string to not expose.
