@@ -27,7 +27,6 @@ etcd_container_image_tag: "{{ etcd_version }}"
 etcd_container_image_registry_prefix: "{{ etcd_container_image_registry_prefix_upstream }}"
 etcd_container_image_registry_prefix_upstream: "{{ etcd_container_image_registry_prefix_upstream_default }}"
 etcd_container_image_registry_prefix_upstream_default: docker.io/
-etcd_container_image_force_pull: "{{ etcd_container_image.endswith(':latest') }}"
 
 etcd_container_image_self_build: false
 etcd_container_image_self_build_name: "bitnamilegacy/etcd:{{ etcd_container_image_self_build_repo_version }}"
