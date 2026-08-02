@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
+# SPDX-FileCopyrightText: 2026 spatterlight
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Verify etcd systemd service
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Wait for etcd service to become active (up to 180s)
+      ansible.builtin.systemd:
+        name: etcd.service
+      register: etcd_service
+      until: etcd_service.status.ActiveState == 'active'
+      retries: 36
+      delay: 5
+
+    - name: Assert etcd service is active
+      ansible.builtin.assert:
+        that: etcd_service.status.ActiveState == 'active'
+        fail_msg: "etcd.service not active ({{ etcd_service.status.ActiveState }})"
+        success_msg: "etcd.service is active"
+
+    - name: Retrieve etcd service log for debugging
+      when: etcd_debug_service_enabled | bool
+      ansible.builtin.command:
+        cmd: journalctl -xeu etcd.service
+      changed_when: false
+
+    - name: Wait for etcd HTTP endpoint to respond (up to 10m)
+      ansible.builtin.uri:
+        url: "http://localhost:2379/health"
+        method: GET
+        status_code: [200, 302]
+        follow_redirects: none
+      register: etcd_endpoint
+      until: etcd_endpoint.status in [200, 302]
+      retries: 120
+      delay: 5
+
+    - name: Assert etcd HTTP endpoint responds
+      ansible.builtin.assert:
+        that: etcd_endpoint.status in [200, 302]
+        fail_msg: "etcd did not respond as expected ({{ etcd_endpoint.status | default('no response') }})"
+        success_msg: "etcd responded with {{ etcd_endpoint.status }}"
+
+    - name: Show etcd systemd service status summary
+      ansible.builtin.debug:
+        msg:
+          - "etcd systemd: {{ etcd_service.status.ActiveState }}"
+          - "etcd HTTP: {{ etcd_endpoint.status }}"
