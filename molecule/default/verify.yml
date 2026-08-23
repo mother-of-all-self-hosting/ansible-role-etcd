@@ -1,14 +1,29 @@
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Verify etcd systemd service
+- name: Verify etcd
   hosts: all
   become: true
   gather_facts: false
+
   tasks:
+    # The role is not included in this playbook, so its defaults are not in
+    # scope. Reading defaults/main.yml directly keeps the version assertion
+    # below tied to the value that Renovate bumps, with nothing to keep in
+    # sync in this scenario. include_vars reads from the controller.
+    #
+    # Only values describing the role itself may be read from this namespace.
+    # Anything this scenario tunes (the root password and the member name,
+    # for example) comes from the scenario's group_vars instead.
+    - name: Load the etcd role defaults
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+        name: etcd_defaults
+
     - name: Wait for etcd service to become active (up to 180s)
       ansible.builtin.systemd:
         name: etcd.service
@@ -29,25 +44,175 @@
         cmd: journalctl -xeu etcd.service
       changed_when: false
 
+    # A systemd unit reaching "active" only means that `docker start` has not
+    # exited yet. etcd's /health endpoint stays unauthenticated even once
+    # authentication is enabled, so it is the cheapest answer the server
+    # itself can give and the first thing here that proves a serving etcd
+    # rather than merely a running process.
+    #
+    # The role publishes the client port on the host, so this also covers
+    # `etcd_container_client_communication_bind_port` reaching the container.
+    # etcd answers /health with a JSON body but labels it `text/plain`, so the
+    # uri module never fills in `json` and the body has to be parsed by hand.
+    # `default` also covers the attempts made while the port is still refusing
+    # connections, where there is no content at all.
     - name: Wait for etcd HTTP endpoint to respond (up to 10m)
       ansible.builtin.uri:
         url: "http://localhost:2379/health"
         method: GET
-        status_code: [200, 302]
+        status_code: [200]
         follow_redirects: none
-      register: etcd_endpoint
-      until: etcd_endpoint.status in [200, 302]
+        return_content: true
+      register: etcd_health
+      until: (etcd_health.content | default('{}', true) | from_json).health | default('') == 'true'
       retries: 120
       delay: 5
 
-    - name: Assert etcd HTTP endpoint responds
-      ansible.builtin.assert:
-        that: etcd_endpoint.status in [200, 302]
-        fail_msg: "etcd did not respond as expected ({{ etcd_endpoint.status | default('no response') }})"
-        success_msg: "etcd responded with {{ etcd_endpoint.status }}"
+    - name: Determine the health reported by the running etcd
+      ansible.builtin.set_fact:
+        etcd_reported_health: "{{ (etcd_health.content | from_json).health }}"
 
-    - name: Show etcd systemd service status summary
+    - name: Assert etcd reports itself healthy over HTTP
+      ansible.builtin.assert:
+        that: etcd_reported_health == 'true'
+        fail_msg: "etcd did not report itself healthy: {{ etcd_health.content | default('no response') }}"
+        success_msg: "etcd reports itself healthy over HTTP"
+
+    # /health above is served before the datastore is necessarily usable by a
+    # client. `etcdctl endpoint health` commits a real proposal through raft,
+    # so it fails if the store cannot actually accept writes. It is run with
+    # credentials on purpose: with authentication enabled, this command
+    # reports the cluster as *unhealthy* when called without them.
+    #
+    # community.docker is deliberately avoided throughout this playbook: the
+    # linting environment in CI has no collections installed.
+    - name: Check etcd endpoint health with credentials
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          endpoint health
+      register: etcd_endpoint_health
+      changed_when: false
+      until: etcd_endpoint_health.rc == 0
+      retries: 24
+      delay: 5
+
+    - name: Assert etcd commits a proposal through raft
+      ansible.builtin.assert:
+        that: "'is healthy' in etcd_endpoint_health.stdout"
+        fail_msg: "etcd endpoint is not healthy: {{ etcd_endpoint_health.stdout | default('no output') }}"
+        success_msg: "etcd commits a proposal through raft"
+
+    # This scenario requires authentication, so an unauthenticated client must
+    # be turned away. Without this probe, the `ALLOW_NONE_AUTHENTICATION=no`
+    # branch of env.j2 could stop being rendered and everything else here
+    # would still pass.
+    - name: Read from etcd without authenticating
+      ansible.builtin.command:
+        cmd: "docker exec {{ etcd_defaults.etcd_identifier }} etcdctl get /mash/molecule/etcd-probe"
+      register: etcd_get_unauthenticated
+      changed_when: false
+      failed_when: false
+
+    - name: Assert etcd rejects unauthenticated clients
+      ansible.builtin.assert:
+        that:
+          - etcd_get_unauthenticated.rc != 0
+          - "'user name is empty' in (etcd_get_unauthenticated.stdout + etcd_get_unauthenticated.stderr)"
+        fail_msg: >-
+          etcd did not reject an unauthenticated client (rc
+          {{ etcd_get_unauthenticated.rc }}):
+          {{ etcd_get_unauthenticated.stdout | default('no output') }}
+        success_msg: "etcd rejects unauthenticated clients"
+
+    # A write and a read back through a separate connection, which covers the
+    # whole path (client -> server -> keyspace) in both directions rather than
+    # just the fact that the server accepts connections.
+    - name: Write a key to etcd
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          put /mash/molecule/etcd-probe etcd-molecule-value
+      register: etcd_put
+      changed_when: true
+
+    - name: Read the key back from etcd
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          get /mash/molecule/etcd-probe --print-value-only
+      register: etcd_get
+      changed_when: false
+
+    - name: Assert the key was stored and read back
+      ansible.builtin.assert:
+        that:
+          - "'OK' in etcd_put.stdout"
+          - "'etcd-molecule-value' in etcd_get.stdout"
+        fail_msg: "A PUT/GET round-trip failed (PUT: {{ etcd_put.stdout }}, GET: {{ etcd_get.stdout }})"
+        success_msg: "A PUT/GET round-trip works"
+
+    # The member name is set by this scenario and travels through env.j2 into
+    # the container's env-file and on into the running process. Reading it
+    # back from the server proves that path end to end - a config file that
+    # was written but never reached the process would fail here.
+    - name: Query the member list reported by the running etcd
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          member list -w json
+      register: etcd_member_list
+      changed_when: false
+
+    - name: Determine the member names reported by the running etcd
+      ansible.builtin.set_fact:
+        etcd_reported_member_names: "{{ (etcd_member_list.stdout | from_json).members | map(attribute='name') | list }}"
+
+    - name: Assert the running etcd uses the member name the scenario asks for
+      ansible.builtin.assert:
+        that: etcd_environment_variable_etcd_name in etcd_reported_member_names
+        fail_msg: >-
+          etcd reports members {{ etcd_reported_member_names }}, but the
+          scenario asks for {{ etcd_environment_variable_etcd_name }}
+        success_msg: "etcd runs as member {{ etcd_environment_variable_etcd_name }}"
+
+    # Tying the running version to `etcd_version` is what makes this scenario
+    # a real test of the version that the role pins: a bump that produces an
+    # unusable image cannot pass here. /version is unauthenticated and reports
+    # the server's own version rather than the client tool's.
+    - name: Query the version reported by the running etcd
+      ansible.builtin.uri:
+        url: "http://localhost:2379/version"
+        method: GET
+        status_code: [200]
+        follow_redirects: none
+        return_content: true
+      register: etcd_version_response
+
+    # /version is labelled `text/plain` just like /health, so its JSON body
+    # has to be parsed by hand as well.
+    - name: Determine the version reported by the running etcd
+      ansible.builtin.set_fact:
+        etcd_reported_version: "{{ (etcd_version_response.content | from_json).etcdserver }}"
+
+    - name: Assert the running etcd is the version the role asks for
+      ansible.builtin.assert:
+        that: etcd_reported_version.startswith(etcd_defaults.etcd_version | string)
+        fail_msg: >-
+          etcd reports version {{ etcd_reported_version | default('none') }},
+          but the role asks for {{ etcd_defaults.etcd_version }}
+        success_msg: "etcd reports version {{ etcd_reported_version }}"
+
+    - name: Show etcd verification summary
       ansible.builtin.debug:
         msg:
           - "etcd systemd: {{ etcd_service.status.ActiveState }}"
-          - "etcd HTTP: {{ etcd_endpoint.status }}"
+          - "HTTP health: {{ etcd_reported_health }}"
+          - "Endpoint health: {{ etcd_endpoint_health.stdout }}"
+          - "PUT/GET round-trip: {{ etcd_get.stdout }}"
+          - "Member name: {{ etcd_reported_member_names | join(', ') }}"
+          - "Version: {{ etcd_reported_version }}"

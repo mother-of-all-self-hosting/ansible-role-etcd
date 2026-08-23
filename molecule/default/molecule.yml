@@ -35,7 +35,18 @@ provisioner:
         etcd_uid: 1000
         etcd_gid: 1000
         etcd_container_client_communication_bind_port: 2379
-        etcd_environment_variable_allow_none_authentication: true
+
+        # Verification asserts that unauthenticated clients are turned away,
+        # which only tests anything when authentication is actually required.
+        # This also exercises the `ALLOW_NONE_AUTHENTICATION=no` branch of
+        # env.j2, which the default `true` above would leave unrendered.
+        etcd_environment_variable_allow_none_authentication: false
+        etcd_environment_variable_etcd_root_password: molecule-root-password
+
+        # A distinctive member name, so that verification can prove this
+        # role-set value travels through env.j2 into the running process
+        # rather than merely landing in a file on disk.
+        etcd_environment_variable_etcd_name: molecule-etcd-member
   env:
     # Workaround for https://github.com/ansible/molecule/issues/4391
     ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:~/.ansible/roles
