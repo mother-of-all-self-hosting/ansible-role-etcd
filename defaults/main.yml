@@ -16,17 +16,17 @@ etcd_base_path: "/{{ etcd_identifier }}"
 etcd_data_path: "{{ etcd_base_path }}/data"
 etcd_tmp_path: "{{ etcd_base_path }}/tmp"
 
-# renovate: datasource=docker depName=bitnamilegacy/etcd versioning=semver
-etcd_version: 3.6.4
+# renovate: datasource=docker depName=gcr.io/etcd-development/etcd versioning=semver
+etcd_version: v3.6.4
 
 etcd_uid: ""
 etcd_gid: ""
 
-etcd_container_image: "{{ etcd_container_image_registry_prefix }}bitnamilegacy/etcd:{{ etcd_container_image_tag }}"
+etcd_container_image: "{{ etcd_container_image_registry_prefix }}etcd-development/etcd:{{ etcd_container_image_tag }}"
 etcd_container_image_tag: "{{ etcd_version }}"
 etcd_container_image_registry_prefix: "{{ etcd_container_image_registry_prefix_upstream }}"
 etcd_container_image_registry_prefix_upstream: "{{ etcd_container_image_registry_prefix_upstream_default }}"
-etcd_container_image_registry_prefix_upstream_default: docker.io/
+etcd_container_image_registry_prefix_upstream_default: gcr.io/
 
 etcd_container_image_self_build: false
 etcd_container_image_self_build_name: "bitnamilegacy/etcd:{{ etcd_container_image_self_build_repo_version }}"
