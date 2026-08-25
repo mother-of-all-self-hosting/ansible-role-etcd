@@ -78,38 +78,17 @@
         fail_msg: "etcd did not report itself healthy: {{ etcd_health.content | default('no response') }}"
         success_msg: "etcd reports itself healthy over HTTP"
 
-    # /health above is served before the datastore is necessarily usable by a
-    # client. `etcdctl endpoint health` commits a real proposal through raft,
-    # so it fails if the store cannot actually accept writes. It is run with
-    # credentials on purpose: with authentication enabled, this command
-    # reports the cluster as *unhealthy* when called without them.
-    #
-    # community.docker is deliberately avoided throughout this playbook: the
-    # linting environment in CI has no collections installed.
-    - name: Check etcd endpoint health with credentials
-      ansible.builtin.command:
-        cmd: >-
-          docker exec {{ etcd_defaults.etcd_identifier }}
-          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
-          endpoint health
-      register: etcd_endpoint_health
-      changed_when: false
-      until: etcd_endpoint_health.rc == 0
-      retries: 24
-      delay: 5
-
-    - name: Assert etcd commits a proposal through raft
-      ansible.builtin.assert:
-        that: "'is healthy' in etcd_endpoint_health.stdout"
-        fail_msg: "etcd endpoint is not healthy: {{ etcd_endpoint_health.stdout | default('no output') }}"
-        success_msg: "etcd commits a proposal through raft"
-
     # This scenario requires authentication, so an unauthenticated client must
     # be turned away. Nothing in the container image does that on its own any
     # more: etcd starts wide open, and it is the role's own post-start
     # provisioning which creates the root user and turns authentication on.
     # Without this probe, that provisioning could stop happening altogether
-    # and everything else here would still pass.
+    # and everything else here would still pass. It comes before everything
+    # which needs credentials, so that a role which left etcd open is caught
+    # here rather than as a side effect further down.
+    #
+    # community.docker is deliberately avoided throughout this playbook: the
+    # linting environment in CI has no collections installed.
     - name: Read from etcd without authenticating
       ansible.builtin.command:
         cmd: "docker exec {{ etcd_defaults.etcd_identifier }} etcdctl get /mash/molecule/etcd-probe"
@@ -127,6 +106,29 @@
           {{ etcd_get_unauthenticated.rc }}):
           {{ etcd_get_unauthenticated.stdout | default('no output') }}
         success_msg: "etcd rejects unauthenticated clients"
+
+    # /health above is served before the datastore is necessarily usable by a
+    # client. `etcdctl endpoint health` commits a real proposal through raft,
+    # so it fails if the store cannot actually accept writes. It is run with
+    # credentials on purpose: with authentication enabled, this command
+    # reports the cluster as *unhealthy* when called without them.
+    - name: Check etcd endpoint health with credentials
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          endpoint health
+      register: etcd_endpoint_health
+      changed_when: false
+      until: etcd_endpoint_health.rc == 0
+      retries: 24
+      delay: 5
+
+    - name: Assert etcd commits a proposal through raft
+      ansible.builtin.assert:
+        that: "'is healthy' in etcd_endpoint_health.stdout"
+        fail_msg: "etcd endpoint is not healthy: {{ etcd_endpoint_health.stdout | default('no output') }}"
+        success_msg: "etcd commits a proposal through raft"
 
     # A write and a read back through a separate connection, which covers the
     # whole path (client -> server -> keyspace) in both directions rather than

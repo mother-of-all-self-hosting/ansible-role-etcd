@@ -66,6 +66,29 @@
         fail_msg: "etcd did not report itself healthy: {{ etcd_health.content | default('no response') }}"
         success_msg: "etcd reports itself healthy over HTTP"
 
+    # The credentials came with the data, so the role must not have needed to
+    # create them - and must not have left etcd open either.
+    #
+    # community.docker is deliberately avoided throughout this playbook: the
+    # linting environment in CI has no collections installed.
+    - name: Read from etcd without authenticating
+      ansible.builtin.command:
+        cmd: "docker exec {{ etcd_defaults.etcd_identifier }} etcdctl get {{ etcd_migration_probe_key }}"
+      register: etcd_get_unauthenticated
+      changed_when: false
+      failed_when: false
+
+    - name: Assert etcd still rejects unauthenticated clients
+      ansible.builtin.assert:
+        that:
+          - etcd_get_unauthenticated.rc != 0
+          - "'user name is empty' in (etcd_get_unauthenticated.stdout + etcd_get_unauthenticated.stderr)"
+        fail_msg: >-
+          etcd did not reject an unauthenticated client (rc
+          {{ etcd_get_unauthenticated.rc }}):
+          {{ etcd_get_unauthenticated.stdout | default('no output') }}
+        success_msg: "etcd still rejects unauthenticated clients"
+
     # This is the assertion the whole scenario exists for. The key below was
     # written by the container image the role used to run, into the layout
     # that image's entrypoint script used. A role which mounts the data path
@@ -74,9 +97,6 @@
     # it just bootstraps an empty new cluster beside the operator's data
     # instead of opening it. Nothing else in this suite can tell the two
     # apart, because a freshly bootstrapped etcd is a working etcd.
-    #
-    # community.docker is deliberately avoided throughout this playbook: the
-    # linting environment in CI has no collections installed.
     - name: Read the key that was written before the role was installed
       ansible.builtin.command:
         cmd: >-
@@ -121,26 +141,6 @@
           one was {{ etcd_migration_seed_state.cluster_id }}. A new cluster was
           bootstrapped instead of the existing one being opened.
         success_msg: "etcd is still cluster {{ etcd_reported_cluster_id }}"
-
-    # The credentials came with the data, so the role must not have needed to
-    # create them - and must not have left etcd open either.
-    - name: Read from etcd without authenticating
-      ansible.builtin.command:
-        cmd: "docker exec {{ etcd_defaults.etcd_identifier }} etcdctl get {{ etcd_migration_probe_key }}"
-      register: etcd_get_unauthenticated
-      changed_when: false
-      failed_when: false
-
-    - name: Assert etcd still rejects unauthenticated clients
-      ansible.builtin.assert:
-        that:
-          - etcd_get_unauthenticated.rc != 0
-          - "'user name is empty' in (etcd_get_unauthenticated.stdout + etcd_get_unauthenticated.stderr)"
-        fail_msg: >-
-          etcd did not reject an unauthenticated client (rc
-          {{ etcd_get_unauthenticated.rc }}):
-          {{ etcd_get_unauthenticated.stdout | default('no output') }}
-        success_msg: "etcd still rejects unauthenticated clients"
 
     - name: Write a key to the migrated etcd
       ansible.builtin.command:
