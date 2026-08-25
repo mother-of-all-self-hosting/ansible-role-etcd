@@ -1,5 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "etcd's own version is deliberately left off patch-automerge: the shared //patch-automerge preset is not extended, so every bump of it waits for a person.",
+    "The reasoning, recorded so that it can be revisited on evidence rather than by feel: etcd is the datastore that other services in a deployment keep their state in, and an upgrade of it is close to one-way - a store opened by a newer etcd records a newer storage version, and going back is a deliberate downgrade rather than a redeploy of the previous tag. A bump merged here is tagged by the autotagger and picked up by mash-playbook's own Renovate, so nobody would be watching when it reached a running deployment.",
+    "Patch releases in the 3.6 series carry more than crash fixes. Reading v3.6.9 through v3.6.14: v3.6.13 added a `--v2-deprecation=write-only-skip-check` option to bypass the v2 content check, which is to say that the check it bypasses can refuse to start a server on data it does not like; v3.6.10, v3.6.11, v3.6.12 and v3.6.14 each changed what a client is authorized to do. None of those six carried a schema migration, which is the usual reason to decline - but all of them are behavioural changes that a fresh-install test cannot see.",
+    "The Molecule suite does run the bumped version and assert that the running server reports it, and its migration scenario does open an older store with newer binaries. That is real coverage, and it is why this is a close call rather than an obvious no. It is still one origin version on a near-empty store, and it cannot speak for the data an actual deployment has accumulated."
+  ],
   "extends": [
     "github>mother-of-all-self-hosting/renovate-config#v1.0.0"
   ]
