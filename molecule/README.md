@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2018-2025 Slavi Pantaleev
+SPDX-FileCopyrightText: 2018-2026 Slavi Pantaleev
 SPDX-FileCopyrightText: 2019-2022 Aaron Raimist
 SPDX-FileCopyrightText: 2019-2023 MDAD project contributors
 SPDX-FileCopyrightText: 2023 QEDeD
@@ -43,11 +43,17 @@ pip3 install -r ./molecule/requirements.txt
 
 ## Scenarios
 
-Currently there is one testing scenario available.
+Currently there are two testing scenarios available.
 
 ### `default`
 
-Tests a standard etcd installation.
+Tests a standard etcd installation: that etcd serves, that it keeps its data where the role's variables say it should, that the role's post-start provisioning has turned authentication on, and that the running server is the version `defaults/main.yml` pins.
+
+### `migration`
+
+Seeds a data directory with the container image this role ran until its `v3.6.4-9` release (`bitnamilegacy/etcd`), in the layout that image's entrypoint script used, and then installs the role over it. It asserts that the resulting etcd is the same cluster, still holding the data and credentials it was seeded with, rather than a new empty one bootstrapped beside them.
+
+This scenario exists for one switch of container image and depends on an image Bitnami no longer maintains. Once the installations it protects are gone - or once the image is - it can be deleted.
 
 ## Running
 
@@ -55,6 +61,7 @@ By default it is configured to run the scenarios on Ubuntu 26.04.
 
 ```bash
 molecule test --scenario-name default
+molecule test --scenario-name migration
 ```
 
 You can utilize other distributions by setting one to the `MOLECULE_DISTRO` environment variable:

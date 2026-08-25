@@ -38,11 +38,18 @@ jobs:
 
     strategy:
       matrix:
-        distro:
-          - ubuntu2604
-          - debian13
-        scenario:
-          - default
+        # The migration scenario checks that an installation made by an older
+        # release of this role keeps its data across the switch of container
+        # image. That is a property of the container and of what is on disk,
+        # neither of which the host's distribution has a say in, so it runs on
+        # one of them only - the organization's runner pool is shared.
+        include:
+          - distro: ubuntu2604
+            scenario: default
+          - distro: debian13
+            scenario: default
+          - distro: ubuntu2604
+            scenario: migration
       fail-fast: false
 
     env:

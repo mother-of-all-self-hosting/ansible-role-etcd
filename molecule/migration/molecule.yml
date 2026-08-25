@@ -1,0 +1,88 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+    force: true
+driver:
+  name: docker
+platforms:
+  - name: etcd-${MOLECULE_DISTRO:-ubuntu2604}-migration
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu2604}-ansible:latest"
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    privileged: true
+    pre_build_image: true
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      callback_result_format: yaml
+  inventory:
+    group_vars:
+      all:
+        # Helper variables
+        etcd_debug_service_enabled: false
+
+        # The container image this role ran up to and including its v3.6.4-9
+        # release, and the layout its entrypoint script used. This is what
+        # every installation predating the switch to the official image has
+        # on disk, and reproducing it here is the whole point of the
+        # scenario. Renovate does not touch it: its manager only looks at
+        # defaults/main.yml.
+        #
+        # Bitnami stopped maintaining these images and may eventually delete
+        # them. If that happens, this scenario has served its purpose and can
+        # be deleted along with them.
+        etcd_migration_seed_container_image: docker.io/bitnamilegacy/etcd:3.6.4
+        etcd_migration_seed_container_volume_path: /bitnami/etcd
+        etcd_migration_seed_container_name: etcd-migration-seed
+
+        # Bootstrapping a single-node etcd is deterministic: with the default
+        # cluster token, every fresh one comes up as cluster
+        # 14841639068965178418 with member 10276657743932975437, whatever it
+        # is named and wherever its data lives. Verification compares the
+        # cluster identifier before and after, which without a token of its
+        # own would compare that constant against itself and hold no matter
+        # what the role did. Seeding with a token makes the seeded cluster
+        # distinguishable from one the role bootstrapped by mistake.
+        etcd_migration_seed_cluster_token: molecule-migration-cluster
+
+        # Written before the role is ever installed and read back afterwards.
+        etcd_migration_probe_key: /mash/molecule/migration-probe
+        etcd_migration_probe_value: written-by-the-previous-container-image
+
+        # Where the seeding step records what it saw, for verification to
+        # compare against. Prepare and verify are separate playbook runs, so
+        # facts do not carry between them.
+        etcd_migration_seed_state_path: /etcd-migration-seed-state.json
+
+        # Variables for etcd
+        etcd_uid: 1000
+        etcd_gid: 1000
+        etcd_container_client_communication_bind_port: 2379
+
+        # Spelled out because seeding and verification both need the data
+        # path, and it is derived from `etcd_base_path` through Jinja, which
+        # neither playbook can resolve on its own.
+        etcd_base_path: /etcd-molecule-migration
+        etcd_data_path: /etcd-molecule-migration/data
+
+        # The seeding step turns authentication on with this password, the
+        # way the previous container image's entrypoint did. The role has to
+        # find the existing credentials rather than replace them.
+        etcd_environment_variable_allow_none_authentication: false
+        etcd_environment_variable_etcd_root_password: molecule-migration-password
+
+        etcd_environment_variable_etcd_name: molecule-migrated-member
+  env:
+    # Workaround for https://github.com/ansible/molecule/issues/4391
+    ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:~/.ansible/roles
+verifier:
+  name: ansible

@@ -1,0 +1,166 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Verify that etcd carried its data across the change of container image
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    # Only values describing the role itself may be read from this namespace.
+    # Anything this scenario tunes - the paths, the root password, the member
+    # name - comes from the scenario's group_vars instead.
+    - name: Load the etcd role defaults
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+        name: etcd_defaults
+
+    - name: Read what the seeding step recorded
+      ansible.builtin.slurp:
+        src: "{{ etcd_migration_seed_state_path }}"
+      register: etcd_migration_seed_state_raw
+
+    - name: Determine what the seeding step recorded
+      ansible.builtin.set_fact:
+        etcd_migration_seed_state: "{{ etcd_migration_seed_state_raw.content | b64decode | from_json }}"
+
+    - name: Wait for etcd service to become active (up to 180s)
+      ansible.builtin.systemd:
+        name: etcd.service
+      register: etcd_service
+      until: etcd_service.status.ActiveState == 'active'
+      retries: 36
+      delay: 5
+
+    - name: Assert etcd service is active
+      ansible.builtin.assert:
+        that: etcd_service.status.ActiveState == 'active'
+        fail_msg: "etcd.service not active ({{ etcd_service.status.ActiveState }})"
+        success_msg: "etcd.service is active"
+
+    - name: Retrieve etcd service log for debugging
+      when: etcd_debug_service_enabled | bool
+      ansible.builtin.command:
+        cmd: journalctl -xeu etcd.service
+      changed_when: false
+
+    # etcd answers /health with a JSON body but labels it `text/plain`, so the
+    # uri module never fills in `json` and the body has to be parsed by hand.
+    - name: Wait for etcd HTTP endpoint to respond (up to 120s)
+      ansible.builtin.uri:
+        url: "http://localhost:2379/health"
+        method: GET
+        status_code: [200]
+        follow_redirects: none
+        return_content: true
+      register: etcd_health
+      until: (etcd_health.content | default('{}', true) | from_json).health | default('') == 'true'
+      retries: 24
+      delay: 5
+
+    - name: Assert etcd reports itself healthy over HTTP
+      ansible.builtin.assert:
+        that: (etcd_health.content | from_json).health == 'true'
+        fail_msg: "etcd did not report itself healthy: {{ etcd_health.content | default('no response') }}"
+        success_msg: "etcd reports itself healthy over HTTP"
+
+    # This is the assertion the whole scenario exists for. The key below was
+    # written by the container image the role used to run, into the layout
+    # that image's entrypoint script used. A role which mounts the data path
+    # somewhere else, or which points etcd at the root of the mount rather
+    # than at the `data` subdirectory below it, starts up perfectly happily -
+    # it just bootstraps an empty new cluster beside the operator's data
+    # instead of opening it. Nothing else in this suite can tell the two
+    # apart, because a freshly bootstrapped etcd is a working etcd.
+    #
+    # community.docker is deliberately avoided throughout this playbook: the
+    # linting environment in CI has no collections installed.
+    - name: Read the key that was written before the role was installed
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          get {{ etcd_migration_probe_key }} --print-value-only
+      register: etcd_migration_probe_get
+      changed_when: false
+
+    - name: Assert the data written by the previous container image survived
+      ansible.builtin.assert:
+        that: etcd_migration_probe_value in etcd_migration_probe_get.stdout
+        fail_msg: >-
+          {{ etcd_migration_probe_key }} reads back as
+          '{{ etcd_migration_probe_get.stdout | trim | default('nothing', true) }}',
+          but was written as '{{ etcd_migration_probe_value }}' before the role
+          was installed. etcd is not using the data it was given.
+        success_msg: "Data written by the previous container image is still there"
+
+    # And the same cluster, not just a cluster with a matching key in it.
+    # This only says anything because the seeding step bootstrapped with a
+    # cluster token of its own: fresh single-node etcds are otherwise all
+    # bootstrapped as the very same cluster identifier.
+    - name: Query the cluster identifier of the running etcd
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          member list -w json
+      register: etcd_member_list
+      changed_when: false
+
+    - name: Determine the cluster identifier of the running etcd
+      ansible.builtin.set_fact:
+        etcd_reported_cluster_id: "{{ (etcd_member_list.stdout | from_json).header.cluster_id }}"
+
+    - name: Assert etcd is still the cluster that was seeded
+      ansible.builtin.assert:
+        that: etcd_reported_cluster_id | string == etcd_migration_seed_state.cluster_id | string
+        fail_msg: >-
+          etcd reports cluster {{ etcd_reported_cluster_id }}, but the seeded
+          one was {{ etcd_migration_seed_state.cluster_id }}. A new cluster was
+          bootstrapped instead of the existing one being opened.
+        success_msg: "etcd is still cluster {{ etcd_reported_cluster_id }}"
+
+    # The credentials came with the data, so the role must not have needed to
+    # create them - and must not have left etcd open either.
+    - name: Read from etcd without authenticating
+      ansible.builtin.command:
+        cmd: "docker exec {{ etcd_defaults.etcd_identifier }} etcdctl get {{ etcd_migration_probe_key }}"
+      register: etcd_get_unauthenticated
+      changed_when: false
+      failed_when: false
+
+    - name: Assert etcd still rejects unauthenticated clients
+      ansible.builtin.assert:
+        that:
+          - etcd_get_unauthenticated.rc != 0
+          - "'user name is empty' in (etcd_get_unauthenticated.stdout + etcd_get_unauthenticated.stderr)"
+        fail_msg: >-
+          etcd did not reject an unauthenticated client (rc
+          {{ etcd_get_unauthenticated.rc }}):
+          {{ etcd_get_unauthenticated.stdout | default('no output') }}
+        success_msg: "etcd still rejects unauthenticated clients"
+
+    - name: Write a key to the migrated etcd
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          put /mash/molecule/post-migration-probe still-writable
+      register: etcd_put
+      changed_when: true
+
+    - name: Assert the migrated etcd still accepts writes
+      ansible.builtin.assert:
+        that: "'OK' in etcd_put.stdout"
+        fail_msg: "The migrated etcd did not accept a write: {{ etcd_put.stdout | default('no output') }}"
+        success_msg: "The migrated etcd still accepts writes"
+
+    - name: Show etcd migration verification summary
+      ansible.builtin.debug:
+        msg:
+          - "etcd systemd: {{ etcd_service.status.ActiveState }}"
+          - "Seeded cluster: {{ etcd_migration_seed_state.cluster_id }}"
+          - "Running cluster: {{ etcd_reported_cluster_id }}"
+          - "Seeded key: {{ etcd_migration_probe_get.stdout | trim }}"

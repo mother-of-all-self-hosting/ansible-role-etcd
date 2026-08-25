@@ -1,0 +1,131 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Prepare etcd Molecule tests
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Ensure apt cache is updated for etcd Molecule tests preparation
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+      when: ansible_facts["os_family"] == 'Debian'
+
+    - name: Ensure required packages are installed for etcd Molecule tests preparation
+      ansible.builtin.package:
+        name:
+          - python3-requests
+        state: present
+
+    - name: Ensure Docker is installed for etcd Molecule tests preparation
+      ansible.builtin.include_role:
+        name: ansible-role-docker
+      vars:
+        docker_daemon_options:
+          storage-driver: vfs
+
+# Everything below leaves the host looking like an installation made by an
+# older release of this role, so that converge can run the current role over
+# it. Nothing here uses the role: it deliberately reproduces what the previous
+# container image did, rather than what the role does today.
+#
+# community.docker is deliberately avoided, here as in verify.yml: the linting
+# environment in CI has no collections installed.
+- name: Seed an etcd installation made by the previous container image
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Ensure the paths an older release of the role would have created exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0750"
+        owner: "{{ etcd_uid }}"
+        group: "{{ etcd_gid }}"
+      loop:
+        - "{{ etcd_base_path }}"
+        - "{{ etcd_data_path }}"
+
+    - name: Ensure the previous etcd container image is pulled
+      ansible.builtin.command:
+        cmd: "docker pull {{ etcd_migration_seed_container_image }}"
+      changed_when: true
+      retries: 3
+      delay: 10
+      register: etcd_migration_seed_pull
+      until: etcd_migration_seed_pull is not failed
+
+    # The mount below is the one the role used to write: the host's data path
+    # at the volume path the previous image's entrypoint script pointed etcd
+    # at, which put the data in a `data` subdirectory of it.
+    - name: Ensure an etcd of the previous container image is running
+      ansible.builtin.command:
+        cmd: >-
+          docker run --detach
+          --name {{ etcd_migration_seed_container_name }}
+          --user {{ etcd_uid }}:{{ etcd_gid }}
+          --env ETCD_NAME={{ etcd_environment_variable_etcd_name }}
+          --env ETCD_ROOT_PASSWORD={{ etcd_environment_variable_etcd_root_password }}
+          --env ETCD_INITIAL_CLUSTER_TOKEN={{ etcd_migration_seed_cluster_token }}
+          --env ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379
+          --env ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+          --mount type=bind,src={{ etcd_data_path }},dst={{ etcd_migration_seed_container_volume_path }}
+          {{ etcd_migration_seed_container_image }}
+      changed_when: true
+
+    - name: Wait for the seeding etcd to accept authenticated clients
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_migration_seed_container_name }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          endpoint health
+      register: etcd_migration_seed_health
+      changed_when: false
+      until: etcd_migration_seed_health.rc == 0
+      retries: 30
+      delay: 5
+
+    - name: Write a key which has to survive the switch of container image
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_migration_seed_container_name }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          put {{ etcd_migration_probe_key }} {{ etcd_migration_probe_value }}
+      changed_when: true
+
+    # The cluster identifier is derived when a cluster is bootstrapped and
+    # then kept in the data directory. Recording it lets verification say that
+    # the migrated etcd is the *same* cluster, not merely one that happens to
+    # hold a key of the same name. It is only worth recording because the
+    # seeding above bootstraps with a cluster token of its own - see
+    # `etcd_migration_seed_cluster_token` in molecule.yml.
+    - name: Query the seeding etcd for its cluster identifier
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_migration_seed_container_name }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          member list -w json
+      register: etcd_migration_seed_member_list
+      changed_when: false
+
+    - name: Record what the seeding etcd looked like
+      ansible.builtin.copy:
+        content: "{{ {'cluster_id': (etcd_migration_seed_member_list.stdout | from_json).header.cluster_id} | to_nice_json }}\n"
+        dest: "{{ etcd_migration_seed_state_path }}"
+        mode: "0644"
+
+    # A graceful stop, so that etcd closes its store the way it would on a
+    # real upgrade rather than being killed mid-write.
+    - name: Ensure the seeding etcd is stopped
+      ansible.builtin.command:
+        cmd: "docker stop -t 30 {{ etcd_migration_seed_container_name }}"
+      changed_when: true
+
+    - name: Ensure the seeding container is removed
+      ansible.builtin.command:
+        cmd: "docker rm {{ etcd_migration_seed_container_name }}"
+      changed_when: true
