@@ -15,6 +15,13 @@
     - { "old": "etcd_systemd_required_systemd_services_list_custom", "new": "etcd_systemd_required_services_list_custom" }
     - { "old": "etcd_container_image_force_pull", "new": "<removed> (the new community.docker.docker_image_pull module handles this natively)" }
     - { "old": "etcd_environment_variable_etcd_enable_v2", "new": "<removed> (etcd 3.6 removed the v2 API, so the setting no longer does anything)" }
+    - { "old": "etcd_container_image_self_build", "new": "<removed> (self-building only ever built Bitnami's image; the official one needs a Go toolchain to build, which this role does not provide)" }
+    - { "old": "etcd_container_image_self_build_name", "new": "<removed> (see `etcd_container_image_self_build`)" }
+    - { "old": "etcd_container_image_self_build_repo", "new": "<removed> (see `etcd_container_image_self_build`)" }
+    - { "old": "etcd_container_image_self_build_repo_version", "new": "<removed> (see `etcd_container_image_self_build`)" }
+    - { "old": "etcd_container_image_self_build_src_files_path", "new": "<removed> (see `etcd_container_image_self_build`)" }
+    - { "old": "etcd_container_image_self_build_repo_dockerfile_dir", "new": "<removed> (see `etcd_container_image_self_build`)" }
+    - { "old": "etcd_container_image_self_build_repo_dockerfile_dir_base", "new": "<removed> (see `etcd_container_image_self_build`)" }
 
 - name: Fail if required etcd settings not defined
   ansible.builtin.fail:
