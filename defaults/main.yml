@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2023 - 2024 Nikita Chernyi
-# SPDX-FileCopyrightText: 2023 - 2025 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2023 - 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2024 Sergio Durigan Junior
 # SPDX-FileCopyrightText: 2025 MASH project contributors
 # SPDX-FileCopyrightText: 2025 Suguru Hirahara
@@ -15,6 +15,26 @@ etcd_identifier: etcd
 etcd_base_path: "/{{ etcd_identifier }}"
 etcd_data_path: "{{ etcd_base_path }}/data"
 etcd_tmp_path: "{{ etcd_base_path }}/tmp"
+
+# The path (inside the container) that `etcd_data_path` is mounted at.
+etcd_container_data_path: /etcd-data
+
+# The path (inside the container) that etcd is told to keep its data at.
+#
+# Note the extra `data` component. Up to and including the v3.6.4-9 release,
+# this role ran Bitnami's container image, whose entrypoint pointed etcd at a
+# `data` subdirectory of the mounted volume. Every installation made by this
+# role therefore keeps its data in `{{ etcd_data_path }}/data` on the host, and
+# preserving that layout is what lets those installations carry their data over
+# to the official container image, rather than quietly bootstrapping an empty
+# new cluster beside it.
+etcd_container_data_dir_path: "{{ etcd_container_data_path }}/data"
+
+# The path (inside the container) that `etcd_tmp_path` is mounted at.
+#
+# The container runs with a read-only root filesystem, so without this there is
+# nowhere for `etcdctl snapshot save` and similar commands to write to.
+etcd_container_tmp_path: /tmp
 
 # renovate: datasource=docker depName=gcr.io/etcd-development/etcd versioning=semver
 etcd_version: v3.6.4

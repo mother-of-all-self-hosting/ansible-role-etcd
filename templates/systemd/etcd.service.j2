@@ -1,5 +1,5 @@
 {#
-SPDX-FileCopyrightText: 2024 Slavi Pantaleev
+SPDX-FileCopyrightText: 2024 - 2026 Slavi Pantaleev
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 #}
@@ -35,8 +35,8 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
       -p {{ etcd_container_peer_communication_bind_port }}:{{ etcd_container_peer_communication_port }} \
       {% endif %}
       --env-file={{ etcd_base_path }}/env \
-      --mount type=bind,src={{ etcd_data_path }},dst=/bitnami/etcd \
-      --mount type=bind,src={{ etcd_tmp_path }},dst=/opt/bitnami/etcd/tmp \
+      --mount type=bind,src={{ etcd_data_path }},dst={{ etcd_container_data_path }} \
+      --mount type=bind,src={{ etcd_tmp_path }},dst={{ etcd_container_tmp_path }} \
       {% for volume in etcd_container_additional_volumes %}
       --mount type={{ volume.type | default('bind' if '/' in volume.src else 'volume') }},src={{ volume.src }},dst={{ volume.dst }}{{ (',' + volume.options) if volume.options | default('') else '' }} \
       {% endfor %}
