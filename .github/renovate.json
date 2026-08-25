@@ -5,12 +5,7 @@
   ],
   "packageRules": [
     {
-      "description": [
-        "etcd's own version automerges on minor and patch. That is wider than the shared //patch-automerge preset allows, hence a local rule instead of extending it.",
-        "What justifies it is the Molecule suite rather than the release notes. The `default` scenario runs the bumped version on both distributions and asserts the running server reports it, provisions authentication and proves an unauthenticated client is refused, and restarts the service so the provisioning path is exercised on a start that is not the first one. The `migration` scenario seeds a data directory with the old Bitnami image and then starts the pinned version over it, so a bump is tested as an upgrade of an existing store rather than only as a fresh install. A release that could not open an existing store, or that changed what etcdctl reports about authentication, fails on the branch and arrives as a pull request instead of merging.",
-        "That second case is not hypothetical. etcd 3.7 changed `etcdctl auth status` so that it answers where 3.6 refused, and the role's provisioning had to be taught to read the value rather than the shape. The suite is what caught it.",
-        "Majors still wait for a person, and so does anything the suite cannot see: the store it exercises is small and freshly written, and cannot speak for the data an actual deployment has accumulated."
-      ],
+      "description": "Minor and patch bumps automerge - wider than the shared //patch-automerge preset, hence a local rule. The `migration` Molecule scenario starts the pinned version over a store written by the old image, so a bump is gated as an upgrade rather than a fresh install. Majors wait for a person.",
       "matchManagers": [
         "custom.regex"
       ],
@@ -25,7 +20,7 @@
       "automergeType": "branch"
     },
     {
-      "description": "Majors always get a pull request and a person. Deliberately last, so it overrides the rule above.",
+      "description": "Majors always get a pull request. Last, so it overrides the rule above.",
       "matchUpdateTypes": [
         "major"
       ],
