@@ -62,6 +62,11 @@ etcd_container_client_communication_bind_port: ""
 # Specify how the container publishes its peer communication port (as defined by `etcd_container_peer_communication_port`).
 #
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2380"), just a port number or an empty string to not expose.
+#
+# Note that this role runs a single-member etcd, which listens for peers on
+# `localhost` inside the container. Publishing the port therefore does not by
+# itself make anything answer on it - `ETCD_LISTEN_PEER_URLS` has to be set
+# through `etcd_environment_variables_additional_variables` as well.
 etcd_container_peer_communication_bind_port: ""
 
 # The client communication port number in the container
