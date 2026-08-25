@@ -33,10 +33,15 @@ etcdctl() {
 	$docker exec "$container" etcdctl "$@"
 }
 
-# etcd answers `auth status` without credentials only while authentication is
-# off. Once it is on, that very same call is refused with a distinctive error.
-# Polling it therefore establishes both that the server is answering at all
-# and which of the two states it is in.
+# `auth status` reports which of the two states etcd is in, and polling it
+# establishes that the server is answering at all at the same time.
+#
+# It is matched on its value rather than on the mere presence of a status
+# line, because the two etcd releases answer it differently: up to 3.6 an
+# unauthenticated `auth status` is refused outright once authentication is on,
+# while 3.7 answers it either way. Reading "there is a status line, so
+# authentication must be off" therefore holds on 3.6 and is exactly backwards
+# on 3.7.
 state=''
 waited=0
 output=''
@@ -45,11 +50,11 @@ while [ "$waited" -lt "$timeout" ]; do
 	output="$(etcdctl auth status 2>&1 || true)"
 
 	case "$output" in
-		*'Authentication Status:'*)
+		*'Authentication Status: false'*)
 			state='disabled'
 			break
 			;;
-		*'user name is empty'*)
+		*'Authentication Status: true'*|*'user name is empty'*)
 			state='enabled'
 			break
 			;;

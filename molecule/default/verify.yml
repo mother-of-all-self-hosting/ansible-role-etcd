@@ -229,6 +229,76 @@
         fail_msg: "etcd did not store its data in {{ etcd_data_path }}/data"
         success_msg: "etcd stores its data in {{ etcd_data_path }}/data"
 
+    # Everything above ran against etcd's very first start, where the role's
+    # post-start provisioning found authentication off and turned it on. Every
+    # later start takes the other path through that script - and every real
+    # installation spends all but the first of its starts there, so leaving it
+    # unexercised would mean testing the rarer of the two.
+    - name: Restart the etcd service
+      ansible.builtin.systemd_service:
+        name: etcd.service
+        state: restarted
+
+    - name: Wait for the restarted etcd service to become active (up to 180s)
+      ansible.builtin.systemd:
+        name: etcd.service
+      register: etcd_service_restarted
+      until: etcd_service_restarted.status.ActiveState == 'active'
+      retries: 36
+      delay: 5
+
+    - name: Assert the etcd service comes back up
+      ansible.builtin.assert:
+        that: etcd_service_restarted.status.ActiveState == 'active'
+        fail_msg: >-
+          etcd.service did not come back after a restart
+          ({{ etcd_service_restarted.status.ActiveState }}). The post-start
+          provisioning fails the unit when it cannot make sense of what etcd
+          tells it.
+        success_msg: "etcd.service comes back after a restart"
+
+    # No waiting or retrying below: the post-start provisioning does not let
+    # the unit finish starting until etcd has answered it, so a unit which is
+    # active is an etcd which is answering. Retrying here would turn "the
+    # container is not up" into a passing unauthenticated probe.
+    - name: Read from the restarted etcd without authenticating
+      ansible.builtin.command:
+        cmd: "docker exec {{ etcd_defaults.etcd_identifier }} etcdctl get /mash/molecule/etcd-probe"
+      register: etcd_get_unauthenticated_after_restart
+      changed_when: false
+      failed_when: false
+
+    - name: Assert the restarted etcd still rejects unauthenticated clients
+      ansible.builtin.assert:
+        that:
+          - etcd_get_unauthenticated_after_restart.rc != 0
+          - >-
+            'user name is empty' in (etcd_get_unauthenticated_after_restart.stdout
+            + etcd_get_unauthenticated_after_restart.stderr)
+        fail_msg: >-
+          The restarted etcd did not reject an unauthenticated client (rc
+          {{ etcd_get_unauthenticated_after_restart.rc }}):
+          {{ etcd_get_unauthenticated_after_restart.stdout | default('no output') }}
+        success_msg: "The restarted etcd still rejects unauthenticated clients"
+
+    - name: Read the key back from the restarted etcd
+      ansible.builtin.command:
+        cmd: >-
+          docker exec {{ etcd_defaults.etcd_identifier }}
+          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          get /mash/molecule/etcd-probe --print-value-only
+      register: etcd_get_after_restart
+      changed_when: false
+
+    - name: Assert the restarted etcd still holds what was written to it
+      ansible.builtin.assert:
+        that: "'etcd-molecule-value' in etcd_get_after_restart.stdout"
+        fail_msg: >-
+          /mash/molecule/etcd-probe reads back as
+          '{{ etcd_get_after_restart.stdout | trim | default('nothing', true) }}'
+          after a restart
+        success_msg: "The restarted etcd still holds what was written to it"
+
     - name: Show etcd verification summary
       ansible.builtin.debug:
         msg:
@@ -239,3 +309,4 @@
           - "Member name: {{ etcd_reported_member_names | join(', ') }}"
           - "Version: {{ etcd_reported_version }}"
           - "Data directory: {{ etcd_data_path }}/data"
+          - "After a restart: {{ etcd_get_after_restart.stdout | trim }}"
