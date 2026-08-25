@@ -1,12 +1,35 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": [
-    "etcd's own version is deliberately left off patch-automerge: the shared //patch-automerge preset is not extended, so every bump of it waits for a person.",
-    "The reasoning, recorded so that it can be revisited on evidence rather than by feel: etcd is the datastore that other services in a deployment keep their state in, and an upgrade of it is close to one-way - a store opened by a newer etcd records a newer storage version, and going back is a deliberate downgrade rather than a redeploy of the previous tag. A bump merged here is tagged by the autotagger and picked up by mash-playbook's own Renovate, so nobody would be watching when it reached a running deployment.",
-    "Patch releases in the 3.6 series carry more than crash fixes. Reading v3.6.9 through v3.6.14: v3.6.13 added a `--v2-deprecation=write-only-skip-check` option to bypass the v2 content check, which is to say that the check it bypasses can refuse to start a server on data it does not like; v3.6.10, v3.6.11, v3.6.12 and v3.6.14 each changed what a client is authorized to do. None of those six carried a schema migration, which is the usual reason to decline - but all of them are behavioural changes that a fresh-install test cannot see.",
-    "The Molecule suite does run the bumped version and assert that the running server reports it, and its migration scenario does open an older store with newer binaries. That is real coverage, and it is why this is a close call rather than an obvious no. It is still one origin version on a near-empty store, and it cannot speak for the data an actual deployment has accumulated."
-  ],
   "extends": [
     "github>mother-of-all-self-hosting/renovate-config#v1.0.0"
+  ],
+  "packageRules": [
+    {
+      "description": [
+        "etcd's own version automerges on minor and patch. That is wider than the shared //patch-automerge preset allows, hence a local rule instead of extending it.",
+        "What justifies it is the Molecule suite rather than the release notes. The `default` scenario runs the bumped version on both distributions and asserts the running server reports it, provisions authentication and proves an unauthenticated client is refused, and restarts the service so the provisioning path is exercised on a start that is not the first one. The `migration` scenario seeds a data directory with the old Bitnami image and then starts the pinned version over it, so a bump is tested as an upgrade of an existing store rather than only as a fresh install. A release that could not open an existing store, or that changed what etcdctl reports about authentication, fails on the branch and arrives as a pull request instead of merging.",
+        "That second case is not hypothetical. etcd 3.7 changed `etcdctl auth status` so that it answers where 3.6 refused, and the role's provisioning had to be taught to read the value rather than the shape. The suite is what caught it.",
+        "Majors still wait for a person, and so does anything the suite cannot see: the store it exercises is small and freshly written, and cannot speak for the data an actual deployment has accumulated."
+      ],
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDepNames": [
+        "gcr.io/etcd-development/etcd"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "description": "Majors always get a pull request and a person. Deliberately last, so it overrides the rule above.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    }
   ]
 }
