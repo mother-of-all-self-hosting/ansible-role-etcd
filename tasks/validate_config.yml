@@ -28,6 +28,15 @@
     - { "name": "etcd_container_network", "when": true }
     - { "name": "etcd_environment_variable_etcd_root_password", "when": "{{ not etcd_environment_variable_allow_none_authentication }}" }
 
+# The password is rendered into the shell script which turns etcd's
+# authentication on, where a line break would split it into two commands.
+- name: Fail if etcd root password contains a line break
+  ansible.builtin.fail:
+    msg: >-
+      etcd_environment_variable_etcd_root_password must not contain a line break.
+  when: >-
+    (etcd_environment_variable_etcd_root_password | string | regex_search('[\r\n]')) is not none
+
 - name: Fail if etcd logging level is invalid
   ansible.builtin.fail:
     msg: >-

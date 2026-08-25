@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 - 2025 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2023 - 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2025 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
@@ -26,6 +26,27 @@
   with_items:
     - env
   register: etcd_support_files_result
+
+# The script carries the root password and is only ever read by the systemd
+# unit's ExecStartPost, which runs as root - never by the container. It is
+# therefore kept out of reach of the user the container runs as, unlike the
+# support files above.
+- name: Ensure etcd authentication provisioning script is installed
+  when: "not etcd_environment_variable_allow_none_authentication | bool"
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/provision-auth.sh.j2"
+    dest: "{{ etcd_auth_provisioning_script_path }}"
+    mode: "0600"
+    owner: root
+    group: root
+  register: etcd_auth_provisioning_script_result
+
+- name: Ensure etcd authentication provisioning script is deleted
+  when: "etcd_environment_variable_allow_none_authentication | bool"
+  ansible.builtin.file:
+    path: "{{ etcd_auth_provisioning_script_path }}"
+    state: absent
+  register: etcd_auth_provisioning_script_deletion_result
 
 - name: Run if self-building of etcd container image is not enabled
   when: "not etcd_container_image_self_build | bool"
@@ -103,6 +124,8 @@
     etcd_restart_necessary: >-
       {{
         etcd_support_files_result.changed | default(false)
+        or etcd_auth_provisioning_script_result.changed | default(false)
+        or etcd_auth_provisioning_script_deletion_result.changed | default(false)
         or etcd_systemd_service_result.changed | default(false)
         or etcd_container_image_pull_result_ansible_module.changed | default(false)
         or etcd_container_image_pull_result_command.changed | default(false)

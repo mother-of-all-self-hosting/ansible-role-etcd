@@ -163,16 +163,51 @@ etcd_environment_variable_etcd_advertise_client_urls: "http://{{ etcd_identifier
 # See: https://etcd.io/docs/v3.4/op-guide/configuration/#--listen-client-urls
 etcd_environment_variable_etcd_listen_client_urls: "http://0.0.0.0:2379"
 
-# Controls the `ETCD_ROOT_PASSWORD` environment variable.
-# Unless `etcd_environment_variable_allow_none_authentication` is set to `true`, this must be set.
-# See: https://github.com/bitnami/containers/blob/4b32eabd74c3d84a67e25b495f501c2fcf418069/bitnami/etcd/3.5/debian-11/rootfs/opt/bitnami/scripts/etcd-env.sh#L89C8-L89C26
+# The password for etcd's `root` user.
+#
+# Unless `etcd_environment_variable_allow_none_authentication` is set to
+# `true`, this must be set. The role then creates the `root` user with this
+# password and turns etcd's authentication on after the service starts, so
+# that etcd refuses unauthenticated clients.
+#
+# The name is a leftover from when this role ran Bitnami's container image,
+# whose entrypoint script read an `ETCD_ROOT_PASSWORD` environment variable.
+# etcd itself has no such variable, so this is no longer passed to the
+# container - but the name is kept, because playbooks (mash-playbook among
+# them) hand this same value to the clients that talk to etcd.
+#
+# Changing the value after the first start does not change the password that
+# etcd already stores: doing that needs the current password, which the role
+# does not have. Refer to docs/configuring-etcd.md for how to change it.
 etcd_environment_variable_etcd_root_password: ""
 
-# Controls the `ALLOW_NONE_AUTHENTICATION` environment variable.
-# This is specific to the bitnami/etcd container image we use.
-# Also see: `etcd_environment_variable_etcd_root_password`
-# See: https://github.com/bitnami/containers/tree/main/bitnami/etcd#customizable-environment-variables
+# Controls whether etcd is left open to unauthenticated clients.
+#
+# When `true`, the role provisions no credentials and does not turn
+# authentication on, and `etcd_environment_variable_etcd_root_password` may be
+# left empty.
+#
+# Turning this on for an installation that already has authentication enabled
+# does not turn it back off: that too needs the current root password. Refer to
+# docs/configuring-etcd.md.
+#
+# The name is a leftover from Bitnami's container image, in the same way as
+# `etcd_environment_variable_etcd_root_password` is.
 etcd_environment_variable_allow_none_authentication: false
+
+# Path to the script (on the host) which turns etcd's authentication on after
+# the container starts. Only installed when authentication is called for.
+etcd_auth_provisioning_script_path: "{{ etcd_base_path }}/provision-auth.sh"
+
+# Controls how long the post-start authentication provisioning waits for etcd
+# to start answering before it gives up and fails the systemd service.
+#
+# The systemd unit derives its `TimeoutStartSec` from this, so raising it does
+# not need any other change.
+etcd_auth_provisioning_timeout_seconds: 60
+
+# Controls the delay between authentication provisioning attempts.
+etcd_auth_provisioning_retry_delay_seconds: 2
 
 # Additional environment variables.
 etcd_environment_variables_additional_variables: ""

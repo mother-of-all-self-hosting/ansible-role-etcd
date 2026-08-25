@@ -1,0 +1,98 @@
+{#
+SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+#}
+#!/bin/sh
+# Turns etcd's authentication on, so that unauthenticated clients are refused.
+#
+# Run from the systemd unit's ExecStartPost on every start. etcd stores its
+# users in its own keyspace, so this can only happen once the server is up,
+# and it has to happen from here rather than from the role's Ansible tasks:
+# those run while the service may well be stopped, and they do not run at all
+# when the machine reboots.
+#
+# Installed by the etcd Ansible role - do not edit, your changes will be lost.
+
+set -eu
+
+docker='{{ devture_systemd_docker_base_host_command_docker }}'
+container='{{ etcd_identifier }}'
+password='{{ etcd_environment_variable_etcd_root_password | replace("'", "'\"'\"'") }}'
+timeout={{ etcd_auth_provisioning_timeout_seconds | int }}
+delay={{ [etcd_auth_provisioning_retry_delay_seconds | int, 1] | max }}
+
+# The official etcd container image is distroless: it ships etcdctl, but no
+# shell, so every call has to be a separate `docker exec` of a single binary.
+#
+# `$docker` is deliberately left unquoted: the command is configurable and
+# defaults to `/usr/bin/env docker`, which is two words. This is the same
+# splitting that systemd does to it in the unit file.
+etcdctl() {
+	# shellcheck disable=SC2086
+	$docker exec "$container" etcdctl "$@"
+}
+
+# etcd answers `auth status` without credentials only while authentication is
+# off. Once it is on, that very same call is refused with a distinctive error.
+# Polling it therefore establishes both that the server is answering at all
+# and which of the two states it is in.
+state=''
+waited=0
+output=''
+
+while [ "$waited" -lt "$timeout" ]; do
+	output="$(etcdctl auth status 2>&1 || true)"
+
+	case "$output" in
+		*'Authentication Status:'*)
+			state='disabled'
+			break
+			;;
+		*'user name is empty'*)
+			state='enabled'
+			break
+			;;
+	esac
+
+	sleep "$delay"
+	waited=$((waited + delay))
+done
+
+if [ -z "$state" ]; then
+	echo "etcd did not start answering within ${timeout}s. Last response: ${output}" >&2
+	exit 1
+fi
+
+if [ "$state" = 'disabled' ]; then
+	# A `root` user may already exist from an earlier run which got as far as
+	# creating it and no further, so an existing one is not an error.
+	output="$(etcdctl user add root --new-user-password="$password" 2>&1 || true)"
+
+	case "$output" in
+		*'User root created'*|*'user name already exists'*) ;;
+		*)
+			echo "Could not create etcd's root user: ${output}" >&2
+			exit 1
+			;;
+	esac
+
+	# etcd does not give the `root` user the `root` role on creation, and it
+	# refuses `auth enable` until the user holds it. Granting a role that is
+	# already granted succeeds, so this needs no condition of its own.
+	etcdctl user grant-role root root > /dev/null
+
+	etcdctl auth enable > /dev/null
+fi
+
+# Whether authentication was just turned on or was already on, the password
+# that this role hands to etcd's clients has to be the one etcd will accept.
+# When it is not, it cannot be repaired from here - changing it needs the
+# current password - so this is reported rather than treated as a startup
+# failure. The datastore itself is healthy, and refusing to finish starting it
+# would take down every service that talks to it without fixing anything.
+if ! etcdctl --user "root:$password" auth status 2>/dev/null | grep -q 'Authentication Status: true'; then
+	echo "etcd requires authentication, but not with the password ${container} is configured with." >&2
+	echo "Clients configured from etcd_environment_variable_etcd_root_password will be refused." >&2
+	echo "See docs/configuring-etcd.md in the etcd Ansible role for how to change the stored password." >&2
+fi

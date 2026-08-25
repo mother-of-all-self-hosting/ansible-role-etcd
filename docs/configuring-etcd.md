@@ -1,6 +1,6 @@
 <!--
 SPDX-FileCopyrightText: 2020 - 2024 MDAD project contributors
-SPDX-FileCopyrightText: 2020 - 2024 Slavi Pantaleev
+SPDX-FileCopyrightText: 2020 - 2026 Slavi Pantaleev
 SPDX-FileCopyrightText: 2020 Aaron Raimist
 SPDX-FileCopyrightText: 2020 Chris van Dijk
 SPDX-FileCopyrightText: 2020 Dominik Zajac
@@ -54,11 +54,31 @@ You also need to set the root password by adding the following configuration to 
 etcd_environment_variable_etcd_root_password: YOUR_PASSWORD_HERE
 ```
 
+Each time the service starts, the role creates etcd's `root` user with this password and turns etcd's authentication on, after which etcd refuses clients which do not authenticate. Both steps are skipped when they have already been done, so restarting the service repeatedly is harmless.
+
 Add the following configuration if you'd like to run etcd without password-protection:
 
 ```yaml
 etcd_environment_variable_allow_none_authentication: true
 ```
+
+#### Changing the password later
+
+etcd stores the password itself, and changing a stored password requires knowing the current one — which this role does not keep. Changing `etcd_environment_variable_etcd_root_password` on an instance which has already been started therefore does **not** change what etcd accepts. The service keeps running, and each start reports the mismatch to its log:
+
+```text
+etcd requires authentication, but not with the password etcd is configured with.
+```
+
+To actually change it, change it in etcd first and in `vars.yml` afterwards:
+
+```sh
+docker exec etcd etcdctl --user root:CURRENT_PASSWORD user passwd root --new-user-password=NEW_PASSWORD
+```
+
+(replace `etcd` with the name your playbook gives the service, e.g. `mash-etcd`)
+
+The same applies in reverse: setting `etcd_environment_variable_allow_none_authentication` to `true` on an instance which already requires authentication does not turn authentication back off. Run `docker exec etcd etcdctl --user root:CURRENT_PASSWORD auth disable` to do that.
 
 ### Extending the configuration
 

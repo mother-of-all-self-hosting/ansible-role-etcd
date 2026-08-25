@@ -51,6 +51,17 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} network conne
 
 ExecStart={{ devture_systemd_docker_base_host_command_docker }} start --attach {{ etcd_identifier }}
 
+{% if not etcd_environment_variable_allow_none_authentication | bool %}
+{# etcd keeps its users in its own keyspace, so authentication can only be #}
+{# turned on once the server is answering - which is after ExecStart, not #}
+{# before it, and on every boot rather than only when Ansible runs. #}
+ExecStartPost={{ devture_systemd_docker_base_host_command_sh }} {{ etcd_auth_provisioning_script_path }}
+
+{# ExecStartPost waits for etcd to answer, so the unit's start timeout has to #}
+{# leave room for that wait plus the provisioning itself. #}
+TimeoutStartSec={{ (etcd_auth_provisioning_timeout_seconds | int) + 30 }}
+{% endif %}
+
 ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} stop -t {{ devture_systemd_docker_base_container_stop_grace_time_seconds }} {{ etcd_identifier }} 2>/dev/null || true'
 ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm {{ etcd_identifier }} 2>/dev/null || true'
 
