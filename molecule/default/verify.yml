@@ -56,7 +56,7 @@
     # uri module never fills in `json` and the body has to be parsed by hand.
     # `default` also covers the attempts made while the port is still refusing
     # connections, where there is no content at all.
-    - name: Wait for etcd HTTP endpoint to respond (up to 10m)
+    - name: Wait for etcd HTTP endpoint to respond (up to 120s)
       ansible.builtin.uri:
         url: "http://localhost:2379/health"
         method: GET
@@ -65,7 +65,7 @@
         return_content: true
       register: etcd_health
       until: (etcd_health.content | default('{}', true) | from_json).health | default('') == 'true'
-      retries: 120
+      retries: 24
       delay: 5
 
     - name: Determine the health reported by the running etcd
@@ -105,9 +105,11 @@
         success_msg: "etcd commits a proposal through raft"
 
     # This scenario requires authentication, so an unauthenticated client must
-    # be turned away. Without this probe, the `ALLOW_NONE_AUTHENTICATION=no`
-    # branch of env.j2 could stop being rendered and everything else here
-    # would still pass.
+    # be turned away. Nothing in the container image does that on its own any
+    # more: etcd starts wide open, and it is the role's own post-start
+    # provisioning which creates the root user and turns authentication on.
+    # Without this probe, that provisioning could stop happening altogether
+    # and everything else here would still pass.
     - name: Read from etcd without authenticating
       ansible.builtin.command:
         cmd: "docker exec {{ etcd_defaults.etcd_identifier }} etcdctl get /mash/molecule/etcd-probe"
@@ -201,11 +203,29 @@
 
     - name: Assert the running etcd is the version the role asks for
       ansible.builtin.assert:
-        that: etcd_reported_version.startswith(etcd_defaults.etcd_version | string)
+        that: etcd_reported_version.startswith(etcd_defaults.etcd_version | string | regex_replace('^v', ''))
         fail_msg: >-
           etcd reports version {{ etcd_reported_version | default('none') }},
           but the role asks for {{ etcd_defaults.etcd_version }}
         success_msg: "etcd reports version {{ etcd_reported_version }}"
+
+    # etcd is pointed at a `data` subdirectory of the mount of
+    # `etcd_data_path`, which is the layout the container image this role used
+    # previously left behind, and which existing installations depend on being
+    # kept. Finding etcd's own storage there on the host is what proves both
+    # the bind mount and `ETCD_DATA_DIR` reached the process: a role which
+    # mounted the data path but pointed etcd at the mount root would start
+    # perfectly well and put `member/` one directory too high.
+    - name: Check where the running etcd keeps its data on the host
+      ansible.builtin.stat:
+        path: "{{ etcd_data_path }}/data/member/snap"
+      register: etcd_data_dir
+
+    - name: Assert etcd stores its data below the role's data path
+      ansible.builtin.assert:
+        that: etcd_data_dir.stat.exists and etcd_data_dir.stat.isdir
+        fail_msg: "etcd did not store its data in {{ etcd_data_path }}/data"
+        success_msg: "etcd stores its data in {{ etcd_data_path }}/data"
 
     - name: Show etcd verification summary
       ansible.builtin.debug:
@@ -216,3 +236,4 @@
           - "PUT/GET round-trip: {{ etcd_get.stdout }}"
           - "Member name: {{ etcd_reported_member_names | join(', ') }}"
           - "Version: {{ etcd_reported_version }}"
+          - "Data directory: {{ etcd_data_path }}/data"

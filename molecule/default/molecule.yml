@@ -37,10 +37,18 @@ provisioner:
         etcd_gid: 1000
         etcd_container_client_communication_bind_port: 2379
 
+        # Deliberately not the role's default path, so that verification
+        # finding etcd's storage below it proves the role honours the setting
+        # rather than that a hardcoded path happens to work. Both are spelled
+        # out because `etcd_data_path` is derived from `etcd_base_path`
+        # through Jinja, which verification cannot resolve on its own.
+        etcd_base_path: /etcd-molecule-default
+        etcd_data_path: /etcd-molecule-default/data
+
         # Verification asserts that unauthenticated clients are turned away,
         # which only tests anything when authentication is actually required.
-        # This also exercises the `ALLOW_NONE_AUTHENTICATION=no` branch of
-        # env.j2, which the default `true` above would leave unrendered.
+        # This also exercises the branch of the role which provisions etcd's
+        # root user and turns authentication on after the service starts.
         etcd_environment_variable_allow_none_authentication: false
         etcd_environment_variable_etcd_root_password: molecule-root-password
 
