@@ -29,14 +29,20 @@ cleanup() {
 
 trap cleanup EXIT
 
-# Starts a scenario with a repository at etcd 3.6.4 which has already
+# Starts a scenario with a repository at etcd v3.6.4 which has already
 # seen two releases of it (v3.6.4-0 and v3.6.4-1).
 #
-# The defaults file is deliberately hostile to a sloppy match. The decoy
-# `..._repo_version` key is written above `etcd_version`, so a match on
-# `_version:` rather than on the anchored leaf name would read "main" and
-# produce a nonsense tag. The image tag is a Jinja reference, so a match on
-# `etcd_container_image_tag` would yield the literal `{{ etcd_version }}`.
+# The defaults file mirrors the real one: the version value carries a leading
+# `v`, and the image name and tag are derived from it through Jinja rather
+# than repeating it. A match on `etcd_container_image_tag` would therefore
+# yield the literal `{{ etcd_version }}`, and a match on `etcd_container_image`
+# a whole image reference.
+#
+# The decoy `..._repo_version` key above `etcd_version` is a hostile input
+# rather than a copy of anything currently in defaults/main.yml: keys ending
+# in `_version` have come and gone there, and a match on `_version:` instead
+# of on the anchored leaf name has to keep being wrong when the next one
+# arrives.
 scenario() {
 	echo "$1"
 
@@ -53,11 +59,12 @@ scenario() {
 	git config commit.gpgsign false
 
 	cat > defaults/main.yml <<-'YAML'
-		etcd_container_image_self_build_repo_version: "main"
+		etcd_decoy_repo_version: "main"
 
-		# renovate: datasource=docker depName=bitnamilegacy/etcd versioning=semver
-		etcd_version: 3.6.4
+		# renovate: datasource=docker depName=gcr.io/etcd-development/etcd versioning=semver
+		etcd_version: v3.6.4
 
+		etcd_container_image: "{{ etcd_container_image_registry_prefix }}etcd-development/etcd:{{ etcd_container_image_tag }}"
 		etcd_container_image_tag: "{{ etcd_version }}"
 	YAML
 
@@ -103,9 +110,9 @@ expect() {
 	fi
 }
 
-bump_version="sed -i 's|^etcd_version: 3.6.4|etcd_version: 3.7.0|' defaults/main.yml"
-revert_version="sed -i 's|^etcd_version: 3.7.0|etcd_version: 3.6.4|' defaults/main.yml"
-prefix_version="sed -i 's|^etcd_version: 3.6.4|etcd_version: v3.7.0|' defaults/main.yml"
+bump_version="sed -i 's|^etcd_version: v3.6.4|etcd_version: v3.7.0|' defaults/main.yml"
+revert_version="sed -i 's|^etcd_version: v3.7.0|etcd_version: v3.6.4|' defaults/main.yml"
+unprefixed_version="sed -i 's|^etcd_version: v3.6.4|etcd_version: 3.7.0|' defaults/main.yml"
 bump_decoy="sed -i 's|_repo_version: \"main\"|_repo_version: \"9.9.9\"|' defaults/main.yml"
 edit_task="printf 'a task\n' >> tasks/main.yml"
 edit_template="printf 'a line\n' >> templates/env.j2"
@@ -145,14 +152,28 @@ scenario 'Reverting to an already released version, with a change'
 merge "$bump_version" > /dev/null
 expect 'a revert' v3.6.4-2 "$(merge "$revert_version && $edit_task")"
 
+# The value carries a leading `v` and so do the tags, but the two must not be
+# doubled up into `vv3.7.0-0`.
 scenario 'A version value carrying a leading v does not double it in the tag'
-expect 'version bump' v3.7.0-0 "$(merge "$prefix_version")"
+expect 'version bump' v3.7.0-0 "$(merge "$bump_version")"
 
-# The self-build repository version is a decoy sitting above `etcd_version`
-# in defaults/main.yml. Changing it is a role change and deserves a release,
-# but the release must still be numbered against the etcd version.
+# Every release before the switch to the official container image was cut
+# from a value which carried no `v`, so a value which loses one has to keep
+# producing the same shape of tag.
+scenario 'A version value carrying no leading v still gets one in the tag'
+expect 'version bump' v3.7.0-0 "$(merge "$unprefixed_version")"
+
+# The decoy sits above `etcd_version` in the defaults file. Changing it is a
+# role change and deserves a release, but the release must still be numbered
+# against the etcd version.
 scenario 'A decoy version key does not become the tag'
 expect 'decoy bump' v3.6.4-2 "$(merge "$bump_decoy")"
+
+# The image name and tag are Jinja references. Reading either of them instead
+# of the leaf would produce a tag with braces in it, which is how a literal
+# `v{{-0` once reached a release in this organization.
+scenario 'A derived image reference does not become the tag'
+expect 'task edit' v3.6.4-2 "$(merge "$edit_task")"
 
 if [ "$failures" -gt 0 ]; then
 	echo >&2 "$failures scenario(s) behaved unexpectedly"

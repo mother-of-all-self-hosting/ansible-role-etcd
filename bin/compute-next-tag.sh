@@ -38,10 +38,10 @@ role_defining_paths=(
 	'templates'
 )
 
-# Anchored at the start of the line on purpose. defaults/main.yml also carries
-# `etcd_container_image_self_build_repo_version`, and the container image tag
-# is written as a Jinja reference to `etcd_version` rather than as a literal,
-# so a looser match would read a value that Renovate never bumps.
+# Anchored at the start of the line on purpose. The container image tag in
+# defaults/main.yml is written as a Jinja reference to `etcd_version` rather
+# than as a literal, and other keys ending in `_version` have come and gone
+# there over time, so a looser match would read a value Renovate never bumps.
 version="$(sed -nE 's|^etcd_version:[[:space:]]*"?([^"[:space:]]+)"?.*$|\1|p' "$defaults_path" | head -n1)"
 
 if [ -z "$version" ]; then
@@ -49,9 +49,11 @@ if [ -z "$version" ]; then
 	exit 1
 fi
 
-# The version values do not carry a leading `v` (e.g. `3.6.4`), but the tags
-# do (`v3.6.4-0`). Stripping any `v` before prepending one keeps this correct
-# even if the version values ever start carrying one.
+# The version value carries a leading `v` (`v3.6.4`), as the tags of the
+# official container image do, and so do the tags cut here (`v3.6.4-0`).
+# Stripping any `v` before prepending one keeps this correct either way: the
+# value carried none until the image was switched, and released tags from
+# both eras have to keep lining up.
 tag_prefix="v${version#v}-"
 
 # Of all releases of this version, the highest release number. Sorted
