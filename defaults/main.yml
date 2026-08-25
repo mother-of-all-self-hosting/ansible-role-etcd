@@ -37,7 +37,7 @@ etcd_container_data_dir_path: "{{ etcd_container_data_path }}/data"
 etcd_container_tmp_path: /tmp
 
 # renovate: datasource=docker depName=gcr.io/etcd-development/etcd versioning=semver
-etcd_version: v3.6.4
+etcd_version: v3.7.1
 
 etcd_uid: ""
 etcd_gid: ""
