@@ -150,10 +150,6 @@ etcd_environment_variables_tz: UTC
 # See: https://etcd.io/docs/v3.4/op-guide/configuration/
 etcd_environment_variable_etcd_name: "{{ inventory_hostname }}-{{ etcd_identifier }}"
 
-# Controls the `ETCD_ENABLE_V2` environment variable.
-# See: https://etcd.io/docs/v3.4/op-guide/configuration/#--enable-v2
-etcd_environment_variable_etcd_enable_v2: false
-
 # Controls the `ETCD_LOG_LEVEL` environment variable.
 # See: https://etcd.io/docs/v3.4/op-guide/configuration/#--log-level
 # Valid values: debug, info, warn, error, panic, or fatal
