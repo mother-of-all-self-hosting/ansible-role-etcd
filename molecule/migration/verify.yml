@@ -157,7 +157,7 @@
         fail_msg: "The migrated etcd did not accept a write: {{ etcd_put.stdout | default('no output') }}"
         success_msg: "The migrated etcd still accepts writes"
 
-    - name: Show etcd migration verification summary
+    - name: Show the etcd migration verification summary
       ansible.builtin.debug:
         msg:
           - "etcd systemd: {{ etcd_service.status.ActiveState }}"

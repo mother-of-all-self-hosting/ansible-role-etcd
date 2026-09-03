@@ -295,14 +295,14 @@
           after a restart
         success_msg: "The restarted etcd still holds what was written to it"
 
-    - name: Show etcd verification summary
+    - name: Show the etcd verification summary
       ansible.builtin.debug:
         msg:
           - "etcd systemd: {{ etcd_service.status.ActiveState }}"
-          - "HTTP health: {{ etcd_reported_health }}"
-          - "Endpoint health: {{ etcd_endpoint_health.stdout }}"
-          - "PUT/GET round-trip: {{ etcd_get.stdout }}"
-          - "Member name: {{ etcd_reported_member_names | join(', ') }}"
-          - "Version: {{ etcd_reported_version }}"
-          - "Data directory: {{ etcd_data_path }}/data"
-          - "After a restart: {{ etcd_get_after_restart.stdout | trim }}"
+          - "etcd version: {{ etcd_reported_version }}"
+          - "etcd HTTP health: {{ etcd_reported_health }}"
+          - "etcd endpoint health: {{ etcd_endpoint_health.stdout }}"
+          - "etcd PUT/GET round-trip: {{ etcd_get.stdout }}"
+          - "etcd member name: {{ etcd_reported_member_names | join(', ') }}"
+          - "etcd data directory: {{ etcd_data_path }}/data"
+          - "etcd after a restart: {{ etcd_get_after_restart.stdout | trim }}"
