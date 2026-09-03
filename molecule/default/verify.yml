@@ -179,9 +179,7 @@
     - name: Assert the running etcd uses the member name the scenario asks for
       ansible.builtin.assert:
         that: etcd_environment_variable_etcd_name in etcd_reported_member_names
-        fail_msg: >-
-          etcd reports members {{ etcd_reported_member_names }}, but the
-          scenario asks for {{ etcd_environment_variable_etcd_name }}
+        fail_msg: "etcd reports members {{ etcd_reported_member_names }}, expected {{ etcd_environment_variable_etcd_name }}"
         success_msg: "etcd runs as member {{ etcd_environment_variable_etcd_name }}"
 
     # Tying the running version to `etcd_version` is what makes this scenario
