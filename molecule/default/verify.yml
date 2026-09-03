@@ -206,10 +206,8 @@
     - name: Assert the running etcd is the version this role installs
       ansible.builtin.assert:
         that: etcd_reported_version.startswith(etcd_defaults.etcd_version | string | regex_replace('^v', ''))
-        fail_msg: >-
-          etcd reports version {{ etcd_reported_version | default('none') }},
-          but the role asks for {{ etcd_defaults.etcd_version }}
-        success_msg: "etcd reports version {{ etcd_reported_version }}"
+        fail_msg: "etcd reports {{ etcd_reported_version | default('none') }}, expected {{ etcd_defaults.etcd_version }}"
+        success_msg: "etcd reports {{ etcd_reported_version }}"
 
     # etcd is pointed at a `data` subdirectory of the mount of
     # `etcd_data_path`, which is the layout the container image this role used
