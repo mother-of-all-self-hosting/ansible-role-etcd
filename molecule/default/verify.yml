@@ -203,7 +203,7 @@
       ansible.builtin.set_fact:
         etcd_reported_version: "{{ (etcd_version_response.content | from_json).etcdserver }}"
 
-    - name: Assert the running etcd is the version the role asks for
+    - name: Assert the running etcd is the version this role installs
       ansible.builtin.assert:
         that: etcd_reported_version.startswith(etcd_defaults.etcd_version | string | regex_replace('^v', ''))
         fail_msg: >-
