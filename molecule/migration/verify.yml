@@ -9,10 +9,10 @@
   gather_facts: false
 
   tasks:
-    # Only values describing the role itself may be read from this namespace.
-    # Anything this scenario tunes - the paths, the root password, the member
-    # name - comes from the scenario's group_vars instead.
-    - name: Load the etcd role defaults
+    # The role is not included in this playbook, so its defaults are not in
+    # scope. Reading defaults/main.yml directly ties the version assertion
+    # below.
+    - name: Load the role defaults
       ansible.builtin.include_vars:
         file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
         name: etcd_defaults
