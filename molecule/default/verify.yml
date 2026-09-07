@@ -181,7 +181,7 @@
     # a real test of the version that the role pins: a bump that produces an
     # unusable image cannot pass here. /version is unauthenticated and reports
     # the server's own version rather than the client tool's.
-    - name: Query the version reported by the running etcd
+    - name: Query the version of the running etcd
       ansible.builtin.uri:
         url: "http://localhost:2379/version"
         method: GET
@@ -192,7 +192,7 @@
 
     # /version is labelled `text/plain` just like /health, so its JSON body
     # has to be parsed by hand as well.
-    - name: Determine the version reported by the running etcd
+    - name: Determine the version of the running etcd
       ansible.builtin.set_fact:
         etcd_reported_version: "{{ (etcd_version_response.content | from_json).etcdserver }}"
 
