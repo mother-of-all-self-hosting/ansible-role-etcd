@@ -73,6 +73,31 @@
         fail_msg: "etcd did not report itself healthy: {{ etcd_health.content | default('no response') }}"
         success_msg: "etcd reports itself healthy over HTTP"
 
+    # Tying the running version to `etcd_version` is what makes this scenario
+    # a real test of the version that the role pins: a bump that produces an
+    # unusable image cannot pass here. /version is unauthenticated and reports
+    # the server's own version rather than the client tool's.
+    - name: Query the version of the running etcd
+      ansible.builtin.uri:
+        url: "http://localhost:2379/version"
+        method: GET
+        status_code: [200]
+        follow_redirects: none
+        return_content: true
+      register: etcd_version_response
+
+    # /version is labelled `text/plain` just like /health, so its JSON body
+    # has to be parsed by hand as well.
+    - name: Determine the version of the running etcd
+      ansible.builtin.set_fact:
+        etcd_reported_version: "{{ (etcd_version_response.content | from_json).etcdserver }}"
+
+    - name: Assert the running etcd is the version this role installs
+      ansible.builtin.assert:
+        that: etcd_reported_version.startswith(etcd_defaults.etcd_version | string | regex_replace('^v', ''))
+        fail_msg: "etcd reports {{ etcd_reported_version | default('none') }}, expected {{ etcd_defaults.etcd_version }}"
+        success_msg: "etcd reports {{ etcd_reported_version }}"
+
     # This scenario requires authentication, so an unauthenticated client must
     # be turned away. Nothing in the container image does that on its own any
     # more: etcd starts wide open, and it is the role's own post-start
@@ -176,31 +201,6 @@
         that: etcd_environment_variable_etcd_name in etcd_reported_member_names
         fail_msg: "etcd reports members {{ etcd_reported_member_names }}, expected {{ etcd_environment_variable_etcd_name }}"
         success_msg: "etcd runs as member {{ etcd_environment_variable_etcd_name }}"
-
-    # Tying the running version to `etcd_version` is what makes this scenario
-    # a real test of the version that the role pins: a bump that produces an
-    # unusable image cannot pass here. /version is unauthenticated and reports
-    # the server's own version rather than the client tool's.
-    - name: Query the version of the running etcd
-      ansible.builtin.uri:
-        url: "http://localhost:2379/version"
-        method: GET
-        status_code: [200]
-        follow_redirects: none
-        return_content: true
-      register: etcd_version_response
-
-    # /version is labelled `text/plain` just like /health, so its JSON body
-    # has to be parsed by hand as well.
-    - name: Determine the version of the running etcd
-      ansible.builtin.set_fact:
-        etcd_reported_version: "{{ (etcd_version_response.content | from_json).etcdserver }}"
-
-    - name: Assert the running etcd is the version this role installs
-      ansible.builtin.assert:
-        that: etcd_reported_version.startswith(etcd_defaults.etcd_version | string | regex_replace('^v', ''))
-        fail_msg: "etcd reports {{ etcd_reported_version | default('none') }}, expected {{ etcd_defaults.etcd_version }}"
-        success_msg: "etcd reports {{ etcd_reported_version }}"
 
     # etcd is pointed at a `data` subdirectory of the mount of
     # `etcd_data_path`, which is the layout the container image this role used
