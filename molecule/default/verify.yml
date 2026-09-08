@@ -90,13 +90,13 @@
         status_code: [200]
         follow_redirects: none
         return_content: true
-      register: etcd_version_response
+      register: etcd_version_reported
 
     # /version is labelled `text/plain` just like /health, so its JSON body
     # has to be parsed by hand as well.
     - name: Determine the version of the running etcd
       ansible.builtin.set_fact:
-        etcd_reported_version: "{{ (etcd_version_response.content | from_json).etcdserver }}"
+        etcd_reported_version: "{{ (etcd_version_reported.content | from_json).etcdserver }}"
 
     - name: Assert the running etcd is the version this role installs
       ansible.builtin.assert:
