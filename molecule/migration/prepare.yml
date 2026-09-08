@@ -65,7 +65,7 @@
     - name: Ensure an etcd of the previous container image is running
       ansible.builtin.command:
         cmd: >-
-          docker run --detach
+          docker run -d
           --name {{ etcd_migration_seed_container_name }}
           --user {{ etcd_uid }}:{{ etcd_gid }}
           --env ETCD_NAME={{ etcd_environment_variable_etcd_name }}
