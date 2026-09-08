@@ -42,7 +42,7 @@
     - name: Retrieve the etcd systemd service log for debugging
       when: etcd_debug_service_enabled | bool
       ansible.builtin.command:
-        cmd: journalctl -xeu etcd.service
+        cmd: journalctl --no-pager --output=cat --unit=etcd.service
       changed_when: false
 
     # A systemd unit reaching "active" only means that `docker start` has not

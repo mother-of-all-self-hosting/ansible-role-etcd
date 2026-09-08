@@ -49,7 +49,7 @@
     - name: Retrieve the etcd systemd service log for debugging
       when: etcd_debug_service_enabled | bool
       ansible.builtin.command:
-        cmd: journalctl -xeu etcd.service
+        cmd: journalctl --no-pager --output=cat --unit=etcd.service
       changed_when: false
 
     # etcd answers /health with a JSON body but labels it `text/plain`, so the
