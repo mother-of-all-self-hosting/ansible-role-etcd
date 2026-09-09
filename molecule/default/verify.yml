@@ -11,6 +11,8 @@
   gather_facts: false
 
   tasks:
+    - name: Verify that etcd works
+      block:
     # The role is not included in this playbook, so its defaults are not in
     # scope. Reading defaults/main.yml directly ties the version assertion
     # below.
@@ -307,3 +309,19 @@
           - "etcd member name: {{ etcd_reported_member_names | join(', ') }}"
           - "etcd data directory: {{ etcd_data_path }}/data"
           - "etcd after a restart: {{ etcd_get_after_restart.stdout | trim }}"
+
+      rescue:
+        # Whatever went wrong, the reason is almost always in the systemd service log.
+        - name: Retrieve the etcd systemd service log
+          ansible.builtin.command:
+            cmd: journalctl --no-pager --output=cat --unit=etcd.service
+          register: etcd_service_log
+          changed_when: false
+
+        - name: Show the etcd systemd service log
+          ansible.builtin.debug:
+            var: etcd_service_log.stdout_lines
+
+        - name: Fail because verification did not pass
+          ansible.builtin.fail:
+            msg: "etcd verification failed. The systemd service log is printed above."
