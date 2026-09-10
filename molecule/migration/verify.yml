@@ -21,15 +21,6 @@
             file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
             name: etcd_defaults
 
-        - name: Read what the seeding step recorded
-          ansible.builtin.slurp:
-            src: "{{ etcd_migration_seed_state_path }}"
-          register: etcd_migration_seed_state_raw
-
-        - name: Determine what the seeding step recorded
-          ansible.builtin.set_fact:
-            etcd_migration_seed_state: "{{ etcd_migration_seed_state_raw.content | b64decode | from_json }}"
-
         - name: Wait for the etcd systemd service to become active (up to 180s)
           ansible.builtin.systemd_service:
             name: etcd.service
@@ -142,6 +133,15 @@
         - name: Determine the cluster identifier of the running etcd
           ansible.builtin.set_fact:
             etcd_reported_cluster_id: "{{ (etcd_member_list.stdout | from_json).header.cluster_id }}"
+
+        - name: Read what the seeding step recorded
+          ansible.builtin.slurp:
+            src: "{{ etcd_migration_seed_state_path }}"
+          register: etcd_migration_seed_state_raw
+
+        - name: Determine what the seeding step recorded
+          ansible.builtin.set_fact:
+            etcd_migration_seed_state: "{{ etcd_migration_seed_state_raw.content | b64decode | from_json }}"
 
         - name: Assert etcd is still the cluster that was seeded
           ansible.builtin.assert:
