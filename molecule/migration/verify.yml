@@ -10,6 +10,10 @@
   become: true
   gather_facts: false
 
+  vars:
+    etcd_verify_units:
+      - etcd.service
+
   tasks:
     - name: Verify that etcd works
       block:
@@ -21,13 +25,14 @@
             file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
             name: etcd_defaults
 
-        - name: Wait for the etcd systemd service to become active (up to 180s)
+        - name: Wait for the etcd systemd services to become active (up to 180s each)
           ansible.builtin.systemd_service:
-            name: etcd.service
-          register: etcd_service
-          until: etcd_service.status.ActiveState == 'active'
+            name: "{{ item }}"
+          register: etcd_services
+          until: etcd_services.status.ActiveState == 'active'
           retries: 36
           delay: 5
+          loop: "{{ etcd_verify_units }}"
           # So that giving up is reported by the assertion below rather than as a
           # wall of systemd unit properties.
           failed_when: false
@@ -35,17 +40,20 @@
         # `Restart=always` in the systemd unit means that even a container which crashes
         # and gets restarted reads as active here, so this is a precondition rather than
         # a result.
-        - name: Assert the etcd systemd service is active
+        - name: Assert the etcd systemd services are active
           ansible.builtin.assert:
-            that: etcd_service.status.ActiveState == 'active'
-            fail_msg: "etcd.service is not active ({{ etcd_service.status.ActiveState }})"
-            success_msg: "etcd.service is active"
+            that: etcd_services.results | map(attribute='status.ActiveState') | unique | list == ['active']
+            fail_msg: >-
+              Not every service is active:
+              {{ dict(etcd_verify_units | zip(etcd_services.results | map(attribute='status.ActiveState'))) }}
+            success_msg: "Every systemd service is active"
 
-        - name: Retrieve the etcd systemd service log for debugging
+        - name: Retrieve the etcd systemd services log for debugging
           when: etcd_debug_service_enabled | bool
           ansible.builtin.command:
-            cmd: journalctl --no-pager --output=cat --unit=etcd.service
+            cmd: "journalctl --no-pager --output=cat --unit={{ item }}"
           changed_when: false
+          loop: "{{ etcd_verify_units }}"
 
         # etcd answers /health with a JSON body but labels it `text/plain`, so the
         # uri module never fills in `json` and the body has to be parsed by hand.
@@ -170,7 +178,7 @@
         - name: Show the etcd migration verification summary
           ansible.builtin.debug:
             msg:
-              - "etcd systemd: {{ etcd_service.status.ActiveState }}"
+              - "etcd systemd: {% for unit, state in etcd_verify_units | zip(etcd_services.results | map(attribute='status.ActiveState')) %}{{ unit }} ({{ state }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "Seeded cluster: {{ etcd_migration_seed_state.cluster_id }}"
               - "Running cluster: {{ etcd_reported_cluster_id }}"
               - "Seeded key: {{ etcd_migration_probe_get.stdout | trim }}"
