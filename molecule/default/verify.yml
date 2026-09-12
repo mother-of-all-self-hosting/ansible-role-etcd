@@ -67,7 +67,7 @@
         # uri module never fills in `json` and the body has to be parsed by hand.
         # `default` also covers the attempts made while the port is still refusing
         # connections, where there is no content at all.
-        - name: Wait for etcd HTTP endpoint to respond (up to 120s)
+        - name: Wait for etcd to report itself healthy (up to 180s)
           ansible.builtin.uri:
             url: "http://localhost:2379/health"
             method: GET
@@ -75,19 +75,22 @@
             follow_redirects: none
             return_content: true
           register: etcd_health
-          until: (etcd_health.content | default('{}', true) | from_json).health | default('') == 'true'
-          retries: 24
+          until: etcd_health.status == 200 and (etcd_health.content | default('{}', true) | from_json).health | default('') == 'true'
+          retries: 36
           delay: 5
+          # So that giving up is reported by the assertion below rather than as a
+          # wall of systemd unit properties.
+          failed_when: false
 
         - name: Determine the health reported by the running etcd
           ansible.builtin.set_fact:
             etcd_reported_health: "{{ (etcd_health.content | from_json).health }}"
 
-        - name: Assert etcd reports itself healthy over HTTP
+        - name: Assert etcd reports itself healthy
           ansible.builtin.assert:
             that: etcd_reported_health == 'true'
             fail_msg: "etcd did not report itself healthy: {{ etcd_health.content | default('no response') }}"
-            success_msg: "etcd reports itself healthy over HTTP"
+            success_msg: "etcd reports itself healthy"
 
         # Tying the running version to `etcd_version` is what makes this scenario
         # a real test of the version that the role pins: a bump that produces an
@@ -163,7 +166,7 @@
         - name: Assert etcd commits a proposal through raft
           ansible.builtin.assert:
             that: "'is healthy' in etcd_endpoint_health.stdout"
-            fail_msg: "etcd endpoint is not healthy: {{ etcd_endpoint_health.stdout | default('no output') }}"
+            fail_msg: "etcd endpoint did not report itself healthy: {{ etcd_endpoint_health.stdout | default('no output') | default('no response') }}"
             success_msg: "etcd commits a proposal through raft"
 
         # A write and a read back through a separate connection, which covers the

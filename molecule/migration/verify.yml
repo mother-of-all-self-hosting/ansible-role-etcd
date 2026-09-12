@@ -57,7 +57,7 @@
 
         # etcd answers /health with a JSON body but labels it `text/plain`, so the
         # uri module never fills in `json` and the body has to be parsed by hand.
-        - name: Wait for etcd HTTP endpoint to respond (up to 120s)
+        - name: Wait for etcd to report itself healthy (up to 120s)
           ansible.builtin.uri:
             url: "http://localhost:2379/health"
             method: GET
@@ -68,12 +68,15 @@
           until: (etcd_health.content | default('{}', true) | from_json).health | default('') == 'true'
           retries: 24
           delay: 5
+          # So that giving up is reported by the assertion below rather than as a
+          # wall of systemd unit properties.
+          failed_when: false
 
-        - name: Assert etcd reports itself healthy over HTTP
+        - name: Assert etcd reports itself healthy
           ansible.builtin.assert:
             that: (etcd_health.content | from_json).health == 'true'
             fail_msg: "etcd did not report itself healthy: {{ etcd_health.content | default('no response') }}"
-            success_msg: "etcd reports itself healthy over HTTP"
+            success_msg: "etcd reports itself healthy"
 
         # The credentials came with the data, so the role must not have needed to
         # create them - and must not have left etcd open either.
