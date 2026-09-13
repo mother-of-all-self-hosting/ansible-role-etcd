@@ -29,6 +29,7 @@ provisioner:
       all:
         # Helper variables
         etcd_debug_service_enabled: false
+        etcd_restarts_check_enabled: true
 
         # The container image this role ran up to and including its v3.6.4-9
         # release, and the layout its entrypoint script used. This is what
