@@ -355,7 +355,7 @@
               - "etcd restarts: {% for unit, restarts in etcd_verify_units | zip(etcd_restarts_after.results | map(attribute='status.NRestarts')) %}{{ restarts }} ({{ unit }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "etcd version: {{ etcd_reported_version }}"
               - "etcd HTTP health: {{ etcd_reported_health }}"
-              - "etcd endpoint health: {{ etcd_endpoint_health.stdout }}"
+              - "etcd health: {{ etcd_endpoint_health.stdout }}"
               - "etcd PUT/GET round-trip: {{ etcd_get.stdout }}"
               - "etcd member name: {{ etcd_reported_member_names | join(', ') }}"
               - "etcd data directory: {{ etcd_data_path }}/data"
