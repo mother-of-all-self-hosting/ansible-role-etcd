@@ -90,7 +90,7 @@ Take a look at:
 
 - [`defaults/main.yml`](../defaults/main.yml) for some variables that you can customize via your `vars.yml` file. You can override settings (even those that don't have dedicated playbook variables) using the `etcd_environment_variables_additional_variables` variable
 
-See its [this page](https://etcd.io/docs/latest/op-guide/configuration/) for a complete list of etcd's config options that you could put in `etcd_environment_variables_additional_variables`.
+See its [this page](https://etcd.io/docs/latest/op-guide/configuration/) for a complete list of etcd's config options that you can put in `etcd_environment_variables_additional_variables`.
 
 ## Upgrading from a release before `v3.6.4-10`
 
