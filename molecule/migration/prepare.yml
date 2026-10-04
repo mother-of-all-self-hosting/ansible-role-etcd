@@ -23,9 +23,6 @@
     - name: Ensure Docker is installed for etcd Molecule tests preparation
       ansible.builtin.include_role:
         name: ansible-role-docker
-      vars:
-        docker_daemon_options:
-          storage-driver: vfs
 
 # Everything below leaves the host looking like an installation made by an
 # older release of this role, so that converge can run the current role over
