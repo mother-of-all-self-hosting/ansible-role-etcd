@@ -96,17 +96,6 @@ Take a look at:
 
 See its [this page](https://etcd.io/docs/latest/op-guide/configuration/) for a complete list of etcd's config options that you can put in `etcd_environment_variables_additional_variables`.
 
-### Upgrading from a release before `v3.6.4-10`
-
-Releases up to and including `v3.6.4-9` ran [Bitnami's etcd container image](https://hub.docker.com/r/bitnamilegacy/etcd), which Bitnami has stopped maintaining. This role now runs [the official image](https://gcr.io/etcd-development/etcd) published by etcd.
-
-A few settings changed along the way, and the role fails with a message naming each of them if it finds one in your configuration:
-
-- `etcd_environment_variable_etcd_enable_v2` is gone. etcd 3.6 removed the v2 API, so it had stopped doing anything.
-- `etcd_container_image_self_build*` are gone. Self-building only ever built Bitnami's image, and etcd's own image cannot be built from a checkout without a Go toolchain first producing its binaries.
-
-`etcd_environment_variable_etcd_root_password` and `etcd_environment_variable_allow_none_authentication` keep working and keep meaning the same thing, but they are no longer passed to the container. The role sets etcd's authentication up itself instead, as described above.
-
 ## Installing
 
 After configuring the playbook, run the installation command of your playbook as below:
@@ -126,3 +115,14 @@ After running the command for installation, the etcd instance becomes available.
 ### Check the service's logs
 
 You can find the logs in [systemd-journald](https://www.freedesktop.org/software/systemd/man/systemd-journald.service.html) by logging in to the server with SSH and running `journalctl -fu etcd` (or how you/your playbook named the service, e.g. `mash-etcd`).
+
+### Upgrading from a release before `v3.6.4-10`
+
+Releases up to and including `v3.6.4-9` ran [Bitnami's etcd container image](https://hub.docker.com/r/bitnamilegacy/etcd), which Bitnami has stopped maintaining. This role now runs [the official image](https://gcr.io/etcd-development/etcd) published by etcd.
+
+A few settings changed along the way, and the role fails with a message naming each of them if it finds one in your configuration:
+
+- `etcd_environment_variable_etcd_enable_v2` is gone. etcd 3.6 removed the v2 API, so it had stopped doing anything.
+- `etcd_container_image_self_build*` are gone. Self-building only ever built Bitnami's image, and etcd's own image cannot be built from a checkout without a Go toolchain first producing its binaries.
+
+`etcd_environment_variable_etcd_root_password` and `etcd_environment_variable_allow_none_authentication` keep working and keep meaning the same thing, but they are no longer passed to the container. The role sets etcd's authentication up itself instead, as described above.
