@@ -1,17 +1,18 @@
 <!--
-SPDX-FileCopyrightText: 2020 - 2024 MDAD project contributors
-SPDX-FileCopyrightText: 2020 - 2026 Slavi Pantaleev
 SPDX-FileCopyrightText: 2020 Aaron Raimist
 SPDX-FileCopyrightText: 2020 Chris van Dijk
 SPDX-FileCopyrightText: 2020 Dominik Zajac
 SPDX-FileCopyrightText: 2020 Mickaël Cornière
+SPDX-FileCopyrightText: 2020-2024 MDAD project contributors
+SPDX-FileCopyrightText: 2020-2026 Slavi Pantaleev
 SPDX-FileCopyrightText: 2022 François Darveau
 SPDX-FileCopyrightText: 2022 Julian Foad
 SPDX-FileCopyrightText: 2022 Warren Bailey
 SPDX-FileCopyrightText: 2023 Antonis Christofides
 SPDX-FileCopyrightText: 2023 Felix Stupp
+SPDX-FileCopyrightText: 2023 Julian-Samuel Gebühr
 SPDX-FileCopyrightText: 2023 Pierre 'McFly' Marty
-SPDX-FileCopyrightText: 2024 - 2025 Suguru Hirahara
+SPDX-FileCopyrightText: 2024-2026 Suguru Hirahara
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
@@ -23,6 +24,9 @@ This is an [Ansible](https://www.ansible.com/) role which installs [etcd](https:
 etcd is a strongly consistent, distributed key-value store that provides a reliable way to store data that needs to be accessed by a distributed system or cluster of machines. It gracefully handles leader elections during network partitions and can tolerate machine failure, even in the leader node.
 
 See the project's [documentation](https://etcd.io/docs/latest/) to learn what etcd does and why it might be useful to you.
+
+>[!NOTE]
+> If you need a production deployment, you will need to install multiple etcd instances (on multiple machines) and connect them in a cluster. Please note that this is beyond the scope of our documentation here.
 
 ## Adjusting the playbook configuration
 
@@ -92,18 +96,16 @@ Take a look at:
 
 See its [this page](https://etcd.io/docs/latest/op-guide/configuration/) for a complete list of etcd's config options that you can put in `etcd_environment_variables_additional_variables`.
 
-## Upgrading from a release before `v3.6.4-10`
+### Upgrading from a release before `v3.6.4-10`
 
-Releases up to and including `v3.6.4-9` ran [Bitnami's etcd container image](https://hub.docker.com/r/bitnamilegacy/etcd), which Bitnami has stopped maintaining. This role now runs [the image etcd publishes itself](https://gcr.io/etcd-development/etcd).
-
-There is nothing to do: the two keep their data in the same place, and the role hands the new image the same directory the old one wrote to. Your data, your `root` user and its password all carry over. Just run the playbook.
+Releases up to and including `v3.6.4-9` ran [Bitnami's etcd container image](https://hub.docker.com/r/bitnamilegacy/etcd), which Bitnami has stopped maintaining. This role now runs [the official image](https://gcr.io/etcd-development/etcd) published by etcd.
 
 A few settings changed along the way, and the role fails with a message naming each of them if it finds one in your configuration:
 
 - `etcd_environment_variable_etcd_enable_v2` is gone. etcd 3.6 removed the v2 API, so it had stopped doing anything.
-- the `etcd_container_image_self_build*` settings are gone. Self-building only ever built Bitnami's image, and etcd's own image cannot be built from a checkout without a Go toolchain first producing its binaries.
+- `etcd_container_image_self_build*` are gone. Self-building only ever built Bitnami's image, and etcd's own image cannot be built from a checkout without a Go toolchain first producing its binaries.
 
-`etcd_environment_variable_etcd_root_password` and `etcd_environment_variable_allow_none_authentication` keep working and keep meaning the same thing, but they are no longer passed to the container: nothing in the official image reads them. The role sets etcd's authentication up itself instead, as described above.
+`etcd_environment_variable_etcd_root_password` and `etcd_environment_variable_allow_none_authentication` keep working and keep meaning the same thing, but they are no longer passed to the container. The role sets etcd's authentication up itself instead, as described above.
 
 ## Installing
 
