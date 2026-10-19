@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: 2023 - 2026 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2023-2026 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -15,6 +16,8 @@
     - { "old": "etcd_systemd_required_systemd_services_list_custom", "new": "etcd_systemd_required_services_list_custom" }
     - { "old": "etcd_container_image_force_pull", "new": "<removed> (the new community.docker.docker_image_pull module handles this natively)" }
     - { "old": "etcd_environment_variable_etcd_enable_v2", "new": "<removed> (etcd 3.6 removed the v2 API, so the setting no longer does anything)" }
+    - { "old": "etcd_environment_variable_etcd_root_password", "new": "etcd_auth_provisioning_password" }
+    - { "old": "etcd_environment_variable_allow_none_authentication", "new": "etcd_auth_provisioning_allow_none_authentication" }
     - { "old": "etcd_container_image_self_build", "new": "<removed> (self-building only ever built Bitnami's image; the official one needs a Go toolchain to build, which this role does not provide)" }
     - { "old": "etcd_container_image_self_build_name", "new": "<removed> (see `etcd_container_image_self_build`)" }
     - { "old": "etcd_container_image_self_build_repo", "new": "<removed> (see `etcd_container_image_self_build`)" }
@@ -33,16 +36,16 @@
     - { "name": "etcd_uid", "when": true }
     - { "name": "etcd_gid", "when": true }
     - { "name": "etcd_container_network", "when": true }
-    - { "name": "etcd_environment_variable_etcd_root_password", "when": "{{ not etcd_environment_variable_allow_none_authentication }}" }
+    - { "name": "etcd_auth_provisioning_password", "when": "{{ not etcd_auth_provisioning_allow_none_authentication }}" }
 
 # The password is rendered into the shell script which turns etcd's
 # authentication on, where a line break would split it into two commands.
 - name: Fail if etcd root password contains a line break
   ansible.builtin.fail:
     msg: >-
-      etcd_environment_variable_etcd_root_password must not contain a line break.
+      etcd_auth_provisioning_password must not contain a line break.
   when: >-
-    (etcd_environment_variable_etcd_root_password | string | regex_search('[\r\n]')) is not none
+    (etcd_auth_provisioning_password | string | regex_search('[\r\n]')) is not none
 
 - name: Fail if etcd logging level is invalid
   ansible.builtin.fail:

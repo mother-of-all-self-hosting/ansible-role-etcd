@@ -1,5 +1,6 @@
 {#
-SPDX-FileCopyrightText: 2024 - 2026 Slavi Pantaleev
+SPDX-FileCopyrightText: 2024-2026 Slavi Pantaleev
+SPDX-FileCopyrightText: 2026 Suguru Hirahara
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 #}
@@ -54,10 +55,12 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} network conne
 
 ExecStart={{ devture_systemd_docker_base_host_command_docker }} start --attach {{ etcd_identifier }}
 
-{% if not etcd_environment_variable_allow_none_authentication | bool %}
-{# etcd keeps its users in its own keyspace, so authentication can only be #}
-{# turned on once the server is answering - which is after ExecStart, not #}
-{# before it, and on every boot rather than only when Ansible runs. #}
+{% if not etcd_auth_provisioning_allow_none_authentication | bool %}
+{#
+  etcd keeps its users in its own keyspace, so authentication can only be
+  turned on once the server is answering - which is after ExecStart, not
+  before it, and on every boot rather than only when Ansible runs.
+#}
 ExecStartPost={{ devture_systemd_docker_base_host_command_sh }} {{ etcd_auth_provisioning_script_path }}
 
 {# ExecStartPost waits for etcd to answer, so the unit's start timeout has to #}

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Slavi Pantaleev
-# SPDX-FileCopyrightText: 2026 spatterlight
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
+# SPDX-FileCopyrightText: 2026 spatterlight
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -57,8 +57,8 @@ provisioner:
         # which only tests anything when authentication is actually required.
         # This also exercises the branch of the role which provisions etcd's
         # root user and turns authentication on after the service starts.
-        etcd_environment_variable_allow_none_authentication: false
-        etcd_environment_variable_etcd_root_password: molecule-root-password
+        etcd_auth_provisioning_allow_none_authentication: false
+        etcd_auth_provisioning_password: molecule-root-password
 
         # A distinctive member name, so that verification can prove this
         # role-set value travels through env.j2 into the running process

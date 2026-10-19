@@ -1,5 +1,6 @@
 {#
 SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+SPDX-FileCopyrightText: 2026 Suguru Hirahara
 
 SPDX-License-Identifier: AGPL-3.0-or-later
 #}
@@ -18,7 +19,7 @@ set -eu
 
 docker='{{ devture_systemd_docker_base_host_command_docker }}'
 container='{{ etcd_identifier }}'
-password='{{ etcd_environment_variable_etcd_root_password | replace("'", "'\"'\"'") }}'
+password='{{ etcd_auth_provisioning_password | replace("'", "'\"'\"'") }}'
 timeout={{ etcd_auth_provisioning_timeout_seconds | int }}
 delay={{ [etcd_auth_provisioning_retry_delay_seconds | int, 1] | max }}
 
@@ -98,6 +99,6 @@ fi
 # would take down every service that talks to it without fixing anything.
 if ! etcdctl --user "root:$password" auth status 2>/dev/null | grep -q 'Authentication Status: true'; then
 	echo "etcd requires authentication, but not with the password ${container} is configured with." >&2
-	echo "Clients configured from etcd_environment_variable_etcd_root_password will be refused." >&2
+	echo "Clients configured from etcd_auth_provisioning_password will be refused." >&2
 	echo "See docs/configuring-etcd.md in the etcd Ansible role for how to change the stored password." >&2
 fi

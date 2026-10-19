@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -66,7 +67,7 @@
           --name {{ etcd_migration_seed_container_name }}
           --user {{ etcd_uid }}:{{ etcd_gid }}
           --env ETCD_NAME={{ etcd_environment_variable_etcd_name }}
-          --env ETCD_ROOT_PASSWORD={{ etcd_environment_variable_etcd_root_password }}
+          --env ETCD_ROOT_PASSWORD={{ etcd_auth_provisioning_password }}
           --env ETCD_INITIAL_CLUSTER_TOKEN={{ etcd_migration_seed_cluster_token }}
           --env ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379
           --env ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
@@ -78,7 +79,7 @@
       ansible.builtin.command:
         cmd: >-
           docker exec {{ etcd_migration_seed_container_name }}
-          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          etcdctl --user root:{{ etcd_auth_provisioning_password }}
           endpoint health
       register: etcd_migration_seed_health
       changed_when: false
@@ -90,7 +91,7 @@
       ansible.builtin.command:
         cmd: >-
           docker exec {{ etcd_migration_seed_container_name }}
-          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          etcdctl --user root:{{ etcd_auth_provisioning_password }}
           put {{ etcd_migration_probe_key }} {{ etcd_migration_probe_value }}
       changed_when: true
 
@@ -104,7 +105,7 @@
       ansible.builtin.command:
         cmd: >-
           docker exec {{ etcd_migration_seed_container_name }}
-          etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+          etcdctl --user root:{{ etcd_auth_provisioning_password }}
           member list -w json
       register: etcd_migration_seed_member_list
       changed_when: false

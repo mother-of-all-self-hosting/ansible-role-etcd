@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -85,8 +86,8 @@ provisioner:
         # The seeding step turns authentication on with this password, the
         # way the previous container image's entrypoint did. The role has to
         # find the existing credentials rather than replace them.
-        etcd_environment_variable_allow_none_authentication: false
-        etcd_environment_variable_etcd_root_password: molecule-migration-password
+        etcd_auth_provisioning_allow_none_authentication: false
+        etcd_auth_provisioning_password: molecule-migration-password
 
         etcd_environment_variable_etcd_name: molecule-migrated-member
   env:

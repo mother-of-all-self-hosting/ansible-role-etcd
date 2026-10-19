@@ -55,7 +55,7 @@ etcd_enabled: true
 You also need to set the root password by adding the following configuration to your `vars.yml` file:
 
 ```yaml
-etcd_environment_variable_etcd_root_password: YOUR_PASSWORD_HERE
+etcd_auth_provisioning_password: YOUR_PASSWORD_HERE
 ```
 
 Each time the service starts, the role creates etcd's `root` user with this password and turns etcd's authentication on, after which etcd refuses clients which do not authenticate. Both steps are skipped when they have already been done, so restarting the service repeatedly is harmless.
@@ -65,12 +65,12 @@ Note that etcd is briefly reachable without authentication while this happens: i
 Add the following configuration if you'd like to run etcd without password-protection:
 
 ```yaml
-etcd_environment_variable_allow_none_authentication: true
+etcd_auth_provisioning_allow_none_authentication: true
 ```
 
 #### Changing the password later
 
-etcd stores the password itself, and changing a stored password requires knowing the current one — which this role does not keep. Changing `etcd_environment_variable_etcd_root_password` on an instance which has already been started therefore does **not** change what etcd accepts. The service keeps running, and each start reports the mismatch to its log:
+etcd stores the password itself, and changing a stored password requires knowing the current one — which this role does not keep. Changing `etcd_auth_provisioning_password` on an instance which has already been started therefore does **not** change what etcd accepts. The service keeps running, and each start reports the mismatch to its log:
 
 ```text
 etcd requires authentication, but not with the password etcd is configured with.
@@ -84,7 +84,7 @@ docker exec etcd etcdctl --user root:CURRENT_PASSWORD user passwd root --new-use
 
 (replace `etcd` with the name your playbook gives the service, e.g. `mash-etcd`)
 
-The same applies in reverse: setting `etcd_environment_variable_allow_none_authentication` to `true` on an instance which already requires authentication does not turn authentication back off. Run `docker exec etcd etcdctl --user root:CURRENT_PASSWORD auth disable` to do that.
+The same applies in reverse: setting `etcd_auth_provisioning_allow_none_authentication` to `true` on an instance which already requires authentication does not turn authentication back off. Run `docker exec etcd etcdctl --user root:CURRENT_PASSWORD auth disable` to do that.
 
 ### Extending the configuration
 
@@ -125,4 +125,4 @@ A few settings changed along the way, and the role fails with a message naming e
 - `etcd_environment_variable_etcd_enable_v2` is gone. etcd 3.6 removed the v2 API, so it had stopped doing anything.
 - `etcd_container_image_self_build*` are gone. Self-building only ever built Bitnami's image, and etcd's own image cannot be built from a checkout without a Go toolchain first producing its binaries.
 
-`etcd_environment_variable_etcd_root_password` and `etcd_environment_variable_allow_none_authentication` keep working and keep meaning the same thing, but they are no longer passed to the container. The role sets etcd's authentication up itself instead, as described above.
+`etcd_auth_provisioning_password` and `etcd_auth_provisioning_allow_none_authentication` keep working and keep meaning the same thing, but they are no longer passed to the container. The role sets etcd's authentication up itself instead, as described above.

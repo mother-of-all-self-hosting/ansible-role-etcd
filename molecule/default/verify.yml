@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Slavi Pantaleev
-# SPDX-FileCopyrightText: 2026 spatterlight
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
+# SPDX-FileCopyrightText: 2026 spatterlight
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -155,7 +155,7 @@
           ansible.builtin.command:
             cmd: >-
               docker exec {{ etcd_defaults.etcd_identifier }}
-              etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+              etcdctl --user root:{{ etcd_auth_provisioning_password }}
               endpoint health
           register: etcd_endpoint_health
           changed_when: false
@@ -176,7 +176,7 @@
           ansible.builtin.command:
             cmd: >-
               docker exec {{ etcd_defaults.etcd_identifier }}
-              etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+              etcdctl --user root:{{ etcd_auth_provisioning_password }}
               put /mash/molecule/etcd-probe etcd-molecule-value
           register: etcd_put
           changed_when: true
@@ -185,7 +185,7 @@
           ansible.builtin.command:
             cmd: >-
               docker exec {{ etcd_defaults.etcd_identifier }}
-              etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+              etcdctl --user root:{{ etcd_auth_provisioning_password }}
               get /mash/molecule/etcd-probe --print-value-only
           register: etcd_get
           changed_when: false
@@ -206,7 +206,7 @@
           ansible.builtin.command:
             cmd: >-
               docker exec {{ etcd_defaults.etcd_identifier }}
-              etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+              etcdctl --user root:{{ etcd_auth_provisioning_password }}
               member list -w json
           register: etcd_member_list
           changed_when: false
@@ -295,7 +295,7 @@
           ansible.builtin.command:
             cmd: >-
               docker exec {{ etcd_defaults.etcd_identifier }}
-              etcdctl --user root:{{ etcd_environment_variable_etcd_root_password }}
+              etcdctl --user root:{{ etcd_auth_provisioning_password }}
               get /mash/molecule/etcd-probe --print-value-only
           register: etcd_get_after_restart
           changed_when: false

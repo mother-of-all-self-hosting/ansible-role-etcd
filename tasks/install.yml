@@ -1,5 +1,5 @@
-# SPDX-FileCopyrightText: 2023 - 2026 Slavi Pantaleev
-# SPDX-FileCopyrightText: 2025 Suguru Hirahara
+# SPDX-FileCopyrightText: 2023-2026 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -32,7 +32,7 @@
 # therefore kept out of reach of the user the container runs as, unlike the
 # support files above.
 - name: Ensure etcd authentication provisioning script is installed
-  when: "not etcd_environment_variable_allow_none_authentication | bool"
+  when: "not etcd_auth_provisioning_allow_none_authentication | bool"
   ansible.builtin.template:
     src: "{{ role_path }}/templates/provision-auth.sh.j2"
     dest: "{{ etcd_auth_provisioning_script_path }}"
@@ -42,7 +42,7 @@
   register: etcd_auth_provisioning_script_result
 
 - name: Ensure etcd authentication provisioning script is deleted
-  when: "etcd_environment_variable_allow_none_authentication | bool"
+  when: "etcd_auth_provisioning_allow_none_authentication | bool"
   ansible.builtin.file:
     path: "{{ etcd_auth_provisioning_script_path }}"
     state: absent

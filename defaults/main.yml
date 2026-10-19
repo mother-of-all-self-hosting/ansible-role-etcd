@@ -1,8 +1,8 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Nikita Chernyi
-# SPDX-FileCopyrightText: 2023 - 2026 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2023, 2024 Nikita Chernyi
+# SPDX-FileCopyrightText: 2023-2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2024 Sergio Durigan Junior
 # SPDX-FileCopyrightText: 2025 MASH project contributors
-# SPDX-FileCopyrightText: 2025 Suguru Hirahara
+# SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -168,35 +168,16 @@ etcd_environment_variable_etcd_listen_client_urls: "http://0.0.0.0:2379"
 
 # The password for etcd's `root` user.
 #
-# Unless `etcd_environment_variable_allow_none_authentication` is set to
-# `true`, this must be set. The role then creates the `root` user with this
-# password and turns etcd's authentication on after the service starts, so
-# that etcd refuses unauthenticated clients.
-#
-# The name is a leftover from when this role ran Bitnami's container image,
-# whose entrypoint script read an `ETCD_ROOT_PASSWORD` environment variable.
-# etcd itself has no such variable, so this is no longer passed to the
-# container - but the name is kept, because playbooks (mash-playbook among
-# them) hand this same value to the clients that talk to etcd.
-#
 # Changing the value after the first start does not change the password that
-# etcd already stores: doing that needs the current password, which the role
-# does not have. Refer to docs/configuring-etcd.md for how to change it.
-etcd_environment_variable_etcd_root_password: ""
+# etcd already stores. Refer to docs/configuring-etcd.md for how to change it.
+etcd_auth_provisioning_password: ""
 
 # Controls whether etcd is left open to unauthenticated clients.
 #
-# When `true`, the role provisions no credentials and does not turn
-# authentication on, and `etcd_environment_variable_etcd_root_password` may be
-# left empty.
-#
 # Turning this on for an installation that already has authentication enabled
-# does not turn it back off: that too needs the current root password. Refer to
+# does not turn it back off. Refer to
 # docs/configuring-etcd.md.
-#
-# The name is a leftover from Bitnami's container image, in the same way as
-# `etcd_environment_variable_etcd_root_password` is.
-etcd_environment_variable_allow_none_authentication: false
+etcd_auth_provisioning_allow_none_authentication: false
 
 # Path to the script (on the host) which turns etcd's authentication on after
 # the container starts. Only installed when authentication is called for.
