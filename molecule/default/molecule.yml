@@ -58,7 +58,7 @@ provisioner:
         # This also exercises the branch of the role which provisions etcd's
         # root user and turns authentication on after the service starts.
         etcd_auth_provisioning_allow_none_authentication: false
-        etcd_auth_provisioning_password: molecule-root-password
+        etcd_auth_provisioning_password: molecule-passwordmolecule-passwordmolecule-passwordmolecule-passwordmole
 
         # A distinctive member name, so that verification can prove this
         # role-set value travels through env.j2 into the running process

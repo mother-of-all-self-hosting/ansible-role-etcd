@@ -87,7 +87,7 @@ provisioner:
         # way the previous container image's entrypoint did. The role has to
         # find the existing credentials rather than replace them.
         etcd_auth_provisioning_allow_none_authentication: false
-        etcd_auth_provisioning_password: molecule-migration-password
+        etcd_auth_provisioning_password: molecule-passwordmolecule-passwordmolecule-passwordmolecule-passwordmole
 
         etcd_environment_variable_etcd_name: molecule-migrated-member
   env:

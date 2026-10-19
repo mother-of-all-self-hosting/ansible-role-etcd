@@ -38,6 +38,11 @@
     - { "name": "etcd_container_network", "when": true }
     - { "name": "etcd_auth_provisioning_password", "when": "{{ not etcd_auth_provisioning_allow_none_authentication }}" }
 
+- name: Fail if etcd root password length exceeded
+  ansible.builtin.fail:
+    msg: "The maximum `etcd_auth_provisioning_password` length is 72 characters"
+  when: "etcd_auth_provisioning_password | length > 72"
+
 # The password is rendered into the shell script which turns etcd's
 # authentication on, where a line break would split it into two commands.
 - name: Fail if etcd root password contains a line break
