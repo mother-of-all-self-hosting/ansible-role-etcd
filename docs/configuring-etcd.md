@@ -116,6 +116,14 @@ After running the command for installation, the etcd instance becomes available.
 
 You can find the logs in [systemd-journald](https://www.freedesktop.org/software/systemd/man/systemd-journald.service.html) by logging in to the server with SSH and running `journalctl -fu etcd` (or how you/your playbook named the service, e.g. `mash-etcd`).
 
+#### Increase logging verbosity
+
+If you want to increase the verbosity, add the following configuration to your `vars.yml` file:
+
+```yaml
+etcd_environment_variable_etcd_log_level: debug
+```
+
 ### Upgrading from a release before `v3.6.4-10`
 
 Releases up to and including `v3.6.4-9` ran [Bitnami's etcd container image](https://hub.docker.com/r/bitnamilegacy/etcd), which Bitnami has stopped maintaining. This role now runs [the official image](https://gcr.io/etcd-development/etcd) published by etcd.
