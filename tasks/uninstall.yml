@@ -25,7 +25,7 @@
         state: absent
 
     - name: Ensure etcd container network does not exist
-      when: etcd_container_network_deletion_enabled
+      when: etcd_container_network_deletion_enabled and etcd_container_network != 'host'
       block:
         - name: Ensure etcd container network does not exist via community.docker.docker_network
           when: devture_systemd_docker_base_container_network_creation_method == 'ansible-module'
